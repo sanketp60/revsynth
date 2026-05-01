@@ -1447,17 +1447,17 @@ flybyBtn.addEventListener('click', () => {
   startBtn.disabled = true;
   flybyBtn.textContent = 'Incoming...';
 
-  // The bike is ALREADY at high RPM in top gear — not starting from idle.
-  // It's racing at ~80% redline, maybe slight acceleration toward redline.
-  const cruiseRPM = Math.round(config.redlineRpm * 0.78);
-  const peakRPM = Math.round(config.redlineRpm * 0.92);
+  // The bike is ALREADY at speed in top gear, accelerating toward redline.
+  // Starts at ~60% redline (distant cruise), hits redline at the pass.
+  const cruiseRPM = Math.round(config.redlineRpm * 0.60);
+  const peakRPM = config.redlineRpm; // hits redline exactly at pass
   setRPM(cruiseRPM);
   currentGear = MAX_GEAR;
   gearNumberDisplay.textContent = MAX_GEAR;
 
   const t = audio.ctx.currentTime;
-  const passTime = 5.0;  // pass moment at 5s
-  const duration = 8.5;  // total
+  const passTime = 7.0;  // pass moment at 7s (2s longer buildup)
+  const duration = 11.5; // total (1s longer exit)
 
   // --- Volume: inverse-square-law feel ---
   // Most of the volume increase happens in the LAST 1-2 seconds
@@ -1465,17 +1465,17 @@ flybyBtn.addEventListener('click', () => {
   const mg = audio.masterGain.gain;
   mg.cancelScheduledValues(t);
   mg.setValueAtTime(0.01, t);                            // barely audible, far right
-  mg.setValueAtTime(0.015, t + 0.5);
-  mg.exponentialRampToValueAtTime(0.03, t + 1.5);        // still distant
-  mg.exponentialRampToValueAtTime(0.06, t + 2.5);        // can hear it now
-  mg.exponentialRampToValueAtTime(0.15, t + 3.5);        // getting louder
-  mg.exponentialRampToValueAtTime(0.45, t + 4.3);        // RUSHING at you
-  mg.exponentialRampToValueAtTime(0.85, t + 4.8);        // almost here
+  mg.setValueAtTime(0.015, t + 1.0);
+  mg.exponentialRampToValueAtTime(0.03, t + 2.5);        // still distant
+  mg.exponentialRampToValueAtTime(0.06, t + 3.5);        // can hear it now
+  mg.exponentialRampToValueAtTime(0.15, t + 5.0);        // getting louder
+  mg.exponentialRampToValueAtTime(0.45, t + 6.0);        // RUSHING at you
+  mg.exponentialRampToValueAtTime(0.85, t + 6.7);        // almost here
   mg.linearRampToValueAtTime(1.0, t + passTime);         // PASS — peak
-  mg.linearRampToValueAtTime(0.55, t + 5.3);             // just passed (still loud)
-  mg.exponentialRampToValueAtTime(0.15, t + 6.0);        // dropping fast
-  mg.exponentialRampToValueAtTime(0.04, t + 7.0);        // fading
-  mg.exponentialRampToValueAtTime(0.01, t + 8.0);        // distant
+  mg.linearRampToValueAtTime(0.55, t + 7.4);             // just passed (still loud)
+  mg.exponentialRampToValueAtTime(0.15, t + 8.2);        // dropping fast
+  mg.exponentialRampToValueAtTime(0.04, t + 9.5);        // fading
+  mg.exponentialRampToValueAtTime(0.01, t + 10.5);       // distant
   mg.linearRampToValueAtTime(0.0, t + duration);         // gone
 
   // --- Stereo: RIGHT → rapid sweep through CENTER → LEFT ---
@@ -1485,22 +1485,22 @@ flybyBtn.addEventListener('click', () => {
   const pan = audio.panner.pan;
   pan.cancelScheduledValues(t);
   pan.setValueAtTime(1.0, t);                            // far right
-  pan.linearRampToValueAtTime(0.85, t + 2.0);            // still mostly right
-  pan.linearRampToValueAtTime(0.5, t + 4.0);             // approaching
+  pan.linearRampToValueAtTime(0.85, t + 3.0);            // still mostly right
+  pan.linearRampToValueAtTime(0.5, t + 5.5);             // approaching
   pan.linearRampToValueAtTime(0.0, t + passTime);        // CENTER — pass
-  pan.linearRampToValueAtTime(-0.5, t + 5.3);            // rapid sweep left
-  pan.linearRampToValueAtTime(-0.85, t + 6.5);           // receding left
+  pan.linearRampToValueAtTime(-0.5, t + 7.5);            // rapid sweep left
+  pan.linearRampToValueAtTime(-0.85, t + 9.0);           // receding left
   pan.linearRampToValueAtTime(-1.0, t + duration);       // far left
 
   // --- LP filter: muffled → bright at pass → muffled ---
   const lp = audio.exhaustLP.frequency;
   lp.cancelScheduledValues(t);
   lp.setValueAtTime(600, t);                             // distant = only bass travels
-  lp.linearRampToValueAtTime(900, t + 2.0);
-  lp.linearRampToValueAtTime(2000, t + 3.5);
+  lp.linearRampToValueAtTime(900, t + 3.0);
+  lp.linearRampToValueAtTime(2000, t + 5.0);
   lp.exponentialRampToValueAtTime(5500, t + passTime);   // FULL spectrum at pass
-  lp.linearRampToValueAtTime(2000, t + 5.8);             // closing fast
-  lp.linearRampToValueAtTime(700, t + 7.0);              // muffled
+  lp.linearRampToValueAtTime(2000, t + 8.0);             // closing fast
+  lp.linearRampToValueAtTime(700, t + 9.5);              // muffled
   lp.linearRampToValueAtTime(350, t + duration);         // just a rumble
 
   // --- RPM + Doppler via rAF ---
@@ -1524,24 +1524,36 @@ flybyBtn.addEventListener('click', () => {
 
     flybyBtn.textContent = elapsed < passTime ? 'Incoming...' : 'Passing...';
 
-    // RPM: slight acceleration during approach (78% → 92% redline)
-    // Doppler: approaching = pitch slightly up, receding = pitch drops
+    // RPM follows realistic top-gear acceleration physics:
+    //
+    // Approach: bike accelerates from ~60% toward redline.
+    // Real acceleration curve in top gear:
+    //   - Strong initial pull (engine has torque surplus over drag)
+    //   - Tapers off toward top speed (drag increases with v²)
+    //   - Logarithmic feel — fast gains early, diminishing returns near redline
+    //
+    // Recede: off throttle, engine braking drops RPM.
+    //   - Fast initial drop (closed throttle = immediate decel)
+    //   - Slows as RPM approaches cruising speed
+
     let targetRPM;
     if (elapsed < passTime) {
-      // Gradual acceleration + Doppler up
-      const progress = elapsed / passTime;
-      const baseRPM = cruiseRPM + (peakRPM - cruiseRPM) * progress;
-      // Doppler approach: +4% at start, 0% at pass
-      // The pitch drop happens FAST near the pass — not linear
+      const progress = elapsed / passTime; // 0 → 1
+      // Logarithmic acceleration: fast early, slows near redline
+      // Simulates power vs aerodynamic drag at high speed
+      const accelCurve = 1 - Math.pow(1 - progress, 1.8);
+      const baseRPM = cruiseRPM + (peakRPM - cruiseRPM) * accelCurve;
+      // Doppler: +4% at distance, drops to 0% at pass
       const dopplerApproach = 0.04 * Math.pow(1 - progress, 2);
       targetRPM = Math.round(baseRPM * (1 + dopplerApproach));
     } else {
-      // Receding: RPM drops (off throttle, engine braking) + Doppler drops pitch
+      // Receding: off throttle, RPM drops from redline toward ~35%
       const recedeProgress = (elapsed - passTime) / (duration - passTime);
-      // RPM decays from peak toward ~40% redline (coasting away)
-      const coastRPM = config.redlineRpm * 0.4;
-      const baseRPM = peakRPM - (peakRPM - coastRPM) * recedeProgress;
-      // Doppler drops fast at first, then slows
+      const coastRPM = config.redlineRpm * 0.35;
+      // Fast initial drop (engine braking), slows as RPM falls
+      const decelCurve = Math.pow(recedeProgress, 0.6);
+      const baseRPM = peakRPM - (peakRPM - coastRPM) * decelCurve;
+      // Doppler: pitch drops fast then slows
       const dopplerRecede = 0.07 * Math.sqrt(recedeProgress);
       targetRPM = Math.round(baseRPM * (1 - dopplerRecede));
     }
