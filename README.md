@@ -1,4 +1,4 @@
-# Motorcycle Engine Sound Simulator
+# RevSynth
 
 A real-time motorcycle engine sound simulator built entirely in the browser using the Web Audio API. Tweak engine parameters — cylinders, crank angles, RPM, stroke type — and hear how different configurations affect the firing order, exhaust note, and engine character.
 
@@ -100,7 +100,7 @@ This is a static single-file site. Deploy anywhere:
 ## Project Structure
 
 ```
-bike_sound_project/
+revsynth/
 ├── index.html    — entire application (~1500 lines)
 ├── CONTEXT.md    — detailed technical context for AI agents
 ├── README.md     — this file
@@ -117,3 +117,4 @@ bike_sound_project/
 ## License
 
 [MIT](LICENSE)
+
