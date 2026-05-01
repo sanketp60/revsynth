@@ -485,7 +485,10 @@
     </div>
 
     <!-- Start/Stop -->
-    <button id="startBtn" style="width:100%; margin-bottom:1rem;">Start Engine</button>
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+      <button id="startBtn" style="flex:1;">Start Engine</button>
+      <button id="flybyBtn" class="secondary" style="flex:1;">Fly-by</button>
+    </div>
 
     <!-- ===== COLLAPSIBLE PANELS ===== -->
 
@@ -561,6 +564,12 @@
         <input type="range" id="throttleSensSlider" min="10" max="200" value="100" step="5" style="accent-color:#ff6b35;">
         <span class="val" id="throttleSensValue" style="min-width:2rem; text-align:right;">100</span>
       </div>
+
+      <div class="slider-row">
+        <span style="min-width:5rem;">Bore/Stroke</span>
+        <input type="range" id="boreStrokeSlider" min="0.7" max="1.6" value="1.0" step="0.05" style="accent-color:#ff6b35;">
+        <span class="val" id="boreStrokeValue" style="min-width:2rem; text-align:right;">1.00</span>
+      </div>
     </article>
 
     <!-- Firing Pattern -->
@@ -601,47 +610,46 @@ const CYL_COLORS = ['#e94560', '#00d2ff', '#00e676', '#ffab00', '#d500f9', '#ff6
 // ============================================================
 // Presets: real bikes with accurate specs
 // revSpeed: throttle response multiplier (1.0 = baseline ~130hp sportbike)
-//   Based on power-to-rotating-mass ratio:
-//   Low-power heavy singles/cruisers = 0.3-0.5 (sluggish, lazy torque)
-//   Mid-range twins/nakeds = 0.6-0.8 (responsive but not explosive)
-//   High-power sportbikes = 1.0-1.4 (screaming, instant response)
+// boreStroke: bore/stroke ratio — affects exhaust pitch and torque curve
+//   >1.0 = oversquare (short stroke, high-revving, screamy)
+//   <1.0 = undersquare (long stroke, torquey, thumpy)
 const PRESETS = {
   // --- Singles ---
-  re350:        { name: 'Royal Enfield Classic 350',    angles: [0],                  cylinders: 1, stroke: 4, idle: 1100, redline: 5500,  limiter: 6800,  revSpeed: 0.35 },
-  ktm390:       { name: 'KTM 390 Duke',                angles: [0],                  cylinders: 1, stroke: 4, idle: 1500, redline: 9500,  limiter: 10500, revSpeed: 0.65 },
+  re350:        { name: 'Royal Enfield Classic 350',    angles: [0],                  cylinders: 1, stroke: 4, idle: 1100, redline: 5500,  limiter: 6800,  revSpeed: 0.35, boreStroke: 0.84 },  // 72×85.8mm
+  ktm390:       { name: 'KTM 390 Duke',                angles: [0],                  cylinders: 1, stroke: 4, idle: 1500, redline: 9500,  limiter: 10500, revSpeed: 0.65, boreStroke: 1.48 },  // 89×60mm
 
   // --- V-Twins ---
-  ducati959:    { name: 'Ducati 959 Panigale',          angles: [0, 90],              cylinders: 2, stroke: 4, idle: 1250, redline: 10500, limiter: 11500, revSpeed: 0.90 },
-  harley883:    { name: 'Harley Sportster 883',         angles: [0, 45],              cylinders: 2, stroke: 4, idle: 950,  redline: 5500,  limiter: 6200,  revSpeed: 0.40 },
-  motoGuzzi:    { name: 'Moto Guzzi V7',               angles: [0, 90],              cylinders: 2, stroke: 4, idle: 1050, redline: 7000,  limiter: 7500,  revSpeed: 0.45 },
-  indian:       { name: 'Indian Scout',                 angles: [0, 60],              cylinders: 2, stroke: 4, idle: 1000, redline: 8100,  limiter: 8600,  revSpeed: 0.55 },
+  ducati959:    { name: 'Ducati 959 Panigale',          angles: [0, 90],              cylinders: 2, stroke: 4, idle: 1250, redline: 10500, limiter: 11500, revSpeed: 0.90, boreStroke: 1.37 },  // 100×73mm (est)
+  harley883:    { name: 'Harley Sportster 883',         angles: [0, 45],              cylinders: 2, stroke: 4, idle: 950,  redline: 5500,  limiter: 6200,  revSpeed: 0.40, boreStroke: 0.79 },  // 76.2×96.8mm
+  motoGuzzi:    { name: 'Moto Guzzi V7',               angles: [0, 90],              cylinders: 2, stroke: 4, idle: 1050, redline: 7000,  limiter: 7500,  revSpeed: 0.45, boreStroke: 1.13 },  // 80×71mm
+  indian:       { name: 'Indian Scout',                 angles: [0, 60],              cylinders: 2, stroke: 4, idle: 1000, redline: 8100,  limiter: 8600,  revSpeed: 0.55, boreStroke: 0.91 },  // 85×93mm (est)
 
   // --- Parallel Twins ---
-  mt07:         { name: 'Yamaha MT-07',                 angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1150, redline: 9500,  limiter: 10500, revSpeed: 0.70 },
-  ninja650:     { name: 'Kawasaki Ninja 650',           angles: [0, 180],             cylinders: 2, stroke: 4, idle: 1200, redline: 10000, limiter: 10500, revSpeed: 0.68 },
-  re650:        { name: 'Royal Enfield INT 650',        angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1100, redline: 7500,  limiter: 8250,  revSpeed: 0.48 },
-  aprilia660:   { name: 'Aprilia RS 660',               angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1300, redline: 10500, limiter: 11500, revSpeed: 0.82 },
-  scrambler1200:{ name: 'Triumph Scrambler 1200 XE',    angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1050, redline: 7000,  limiter: 7500,  revSpeed: 0.50 },
+  mt07:         { name: 'Yamaha MT-07',                 angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1150, redline: 9500,  limiter: 10500, revSpeed: 0.70, boreStroke: 1.14 },  // 80×70mm
+  ninja650:     { name: 'Kawasaki Ninja 650',           angles: [0, 180],             cylinders: 2, stroke: 4, idle: 1200, redline: 10000, limiter: 10500, revSpeed: 0.68, boreStroke: 1.12 },  // 83×74mm
+  re650:        { name: 'Royal Enfield INT 650',        angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1100, redline: 7500,  limiter: 8250,  revSpeed: 0.48, boreStroke: 1.06 },  // 78×73.7mm
+  aprilia660:   { name: 'Aprilia RS 660',               angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1300, redline: 10500, limiter: 11500, revSpeed: 0.82, boreStroke: 1.25 },  // 81×65mm
+  scrambler1200:{ name: 'Triumph Scrambler 1200 XE',    angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1050, redline: 7000,  limiter: 7500,  revSpeed: 0.50, boreStroke: 1.22 },  // 97.6×80mm
 
   // --- Triples ---
-  triumph765:   { name: 'Triumph Street Triple 765 RS', angles: [0, 240, 480],        cylinders: 3, stroke: 4, idle: 1250, redline: 12000, limiter: 12650, revSpeed: 1.00 },
-  mt09:         { name: 'Yamaha MT-09',                 angles: [0, 240, 480],        cylinders: 3, stroke: 4, idle: 1200, redline: 10500, limiter: 11500, revSpeed: 0.92 },
+  triumph765:   { name: 'Triumph Street Triple 765 RS', angles: [0, 240, 480],        cylinders: 3, stroke: 4, idle: 1250, redline: 12000, limiter: 12650, revSpeed: 1.00, boreStroke: 1.46 },  // 78×53.4mm
+  mt09:         { name: 'Yamaha MT-09',                 angles: [0, 240, 480],        cylinders: 3, stroke: 4, idle: 1200, redline: 10500, limiter: 11500, revSpeed: 0.92, boreStroke: 1.26 },  // 78×62mm (est)
 
   // --- Inline Fours ---
-  cbr600:       { name: 'Honda CBR600RR',               angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, idle: 1300, redline: 14000, limiter: 15000, revSpeed: 1.10 },
-  zx6r:         { name: 'Kawasaki ZX-6R',               angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, idle: 1300, redline: 14500, limiter: 15500, revSpeed: 1.12 },
-  r1:           { name: 'Yamaha YZF-R1 (Crossplane)',   angles: [0, 270, 180, 450],   cylinders: 4, stroke: 4, idle: 1100, redline: 13500, limiter: 14200, revSpeed: 1.20 },
-  s1000rr:      { name: 'BMW S1000RR',                  angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, idle: 1150, redline: 13500, limiter: 14200, revSpeed: 1.30 },
+  cbr600:       { name: 'Honda CBR600RR',               angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, idle: 1300, redline: 14000, limiter: 15000, revSpeed: 1.10, boreStroke: 1.58 },  // 67×42.5mm
+  zx6r:         { name: 'Kawasaki ZX-6R',               angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, idle: 1300, redline: 14500, limiter: 15500, revSpeed: 1.12, boreStroke: 1.50 },  // 67×44.8mm
+  r1:           { name: 'Yamaha YZF-R1 (Crossplane)',   angles: [0, 270, 180, 450],   cylinders: 4, stroke: 4, idle: 1100, redline: 13500, limiter: 14200, revSpeed: 1.20, boreStroke: 1.36 },  // 79×58mm (est)
+  s1000rr:      { name: 'BMW S1000RR',                  angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, idle: 1150, redline: 13500, limiter: 14200, revSpeed: 1.30, boreStroke: 1.38 },  // 80×58mm
 
   // --- V4 ---
-  panigaleV4:   { name: 'Ducati Panigale V4',           angles: [0, 90, 360, 450],    cylinders: 4, stroke: 4, idle: 1300, redline: 13500, limiter: 14500, revSpeed: 1.35 },
+  panigaleV4:   { name: 'Ducati Panigale V4',           angles: [0, 90, 360, 450],    cylinders: 4, stroke: 4, idle: 1300, redline: 13500, limiter: 14500, revSpeed: 1.35, boreStroke: 1.51 },  // 81×53.5mm
 
   // --- Flat / Boxer ---
-  goldwing:     { name: 'Honda Gold Wing (Flat-6)',      angles: [0, 120, 240, 360, 480, 600], cylinders: 6, stroke: 4, idle: 750,  redline: 6000,  limiter: 6800,  revSpeed: 0.38 },
-  r1250gs:      { name: 'BMW R1250GS (Boxer Twin)',     angles: [0, 360],             cylinders: 2, stroke: 4, idle: 950,  redline: 7700,  limiter: 8500,  revSpeed: 0.52 },
+  goldwing:     { name: 'Honda Gold Wing (Flat-6)',      angles: [0, 120, 240, 360, 480, 600], cylinders: 6, stroke: 4, idle: 750,  redline: 6000,  limiter: 6800,  revSpeed: 0.38, boreStroke: 1.22 },  // 73×60mm
+  r1250gs:      { name: 'BMW R1250GS (Boxer Twin)',     angles: [0, 360],             cylinders: 2, stroke: 4, idle: 950,  redline: 7700,  limiter: 8500,  revSpeed: 0.52, boreStroke: 1.27 },  // 102×80mm
 
   // --- Custom ---
-  custom:       { name: 'Custom',                       angles: [0],                  cylinders: 1, stroke: 4, idle: 1200, redline: 9000,  limiter: 11000, revSpeed: 0.70 },
+  custom:       { name: 'Custom',                       angles: [0],                  cylinders: 1, stroke: 4, idle: 1200, redline: 9000,  limiter: 11000, revSpeed: 0.70, boreStroke: 1.0 },
 };
 
 // ============================================================
@@ -656,6 +664,7 @@ class EngineConfig {
     this.redlineRpm = 9000;
     this.limiterRpm = 11000;
     this.revSpeed = 1.0;  // throttle response multiplier
+    this.boreStroke = 1.0; // bore/stroke ratio
   }
 
   get redlineProximity() {
@@ -733,7 +742,13 @@ class EngineAudio {
       const centerSample = Math.floor((angle / cycleDeg) * len);
       const pulseSamples = Math.floor(len * 0.18);
       const decayRate = 6.0 + idx * 0.5;
-      const fundFreq = 55 + idx * 6;
+      // Bore/stroke ratio affects exhaust fundamental frequency:
+      // Undersquare (long stroke, <1.0) = more air displaced per stroke = deeper tone
+      // Oversquare (short stroke, >1.0) = less displacement per stroke = higher pitch
+      // Baseline 55Hz at ratio 1.0, scales ±30%
+      const bsRatio = cfg.boreStroke || 1.0;
+      const bsPitchMult = 0.7 + bsRatio * 0.3; // 0.7-1.18 range
+      const fundFreq = (55 * bsPitchMult) + idx * 6;
 
       for (let j = 0; j < pulseSamples; j++) {
         const writeIdx = (centerSample + j) % len;
@@ -788,7 +803,12 @@ class EngineAudio {
     this.compressor.ratio.value = 4;
     this.compressor.attack.value = 0.003;
     this.compressor.release.value = 0.1;
-    this.masterGain.connect(this.compressor);
+    // Stereo panner (used by fly-by for L/R sweep)
+    this.panner = ctx.createStereoPanner();
+    this.panner.pan.value = 0; // center by default
+
+    this.masterGain.connect(this.panner);
+    this.panner.connect(this.compressor);
     this.compressor.connect(ctx.destination);
 
     this.exhaustBus = ctx.createGain();
@@ -1004,6 +1024,10 @@ class EngineAudio {
     if (this.source) { try { this.source.stop(); } catch(e) {} this.source = null; }
     if (this.ctx) { this.ctx.close(); this.ctx = null; }
   }
+
+  /** Is a fly-by currently running? */
+  get isFlyby() { return this._flybyActive || false; }
+
 }
 
 // ============================================================
@@ -1271,10 +1295,27 @@ function getRpmDelta(accelerating) {
   const throttleRamp = Math.min(1.0, holdTime / 0.8);
 
   if (accelerating) {
+    // Bore/stroke shapes the torque curve:
+    // Undersquare (<1.0): strong low-end, drops off high — the torque curve peaks early
+    // Oversquare (>1.0): weak low-end, screams on top — the torque curve peaks late
+    const bs = config.boreStroke || 1.0;
+    // Shift the powerband peak: undersquare peaks at ~30% RPM, oversquare at ~60%
+    const peakNorm = 0.25 + (bs - 0.7) * 0.4; // 0.25-0.61 range
+
     let rpmCurve;
-    if (rpmNorm < 0.15) rpmCurve = 0.3 + rpmNorm * 3;
-    else if (rpmNorm < 0.7) rpmCurve = 0.75 + 0.25 * Math.sin((rpmNorm - 0.15) / 0.55 * Math.PI);
-    else { rpmCurve = 1.0 - (rpmNorm - 0.7) * 2.5; rpmCurve = Math.max(0.15, rpmCurve); }
+    if (rpmNorm < peakNorm * 0.4) {
+      // Below powerband: undersquare = strong here, oversquare = weak
+      const lowBoost = Math.max(0.3, 1.3 - bs); // undersquare: 1.3-0.79=0.51→boost, oversquare: lower
+      rpmCurve = lowBoost * (0.3 + rpmNorm / (peakNorm * 0.4) * 0.7);
+    } else if (rpmNorm < peakNorm * 1.4) {
+      // Powerband: peak torque zone
+      rpmCurve = 0.8 + 0.2 * Math.sin((rpmNorm - peakNorm * 0.4) / (peakNorm) * Math.PI);
+    } else {
+      // Above powerband: oversquare holds better, undersquare drops off
+      const topHold = Math.max(0.1, 0.3 + (bs - 1.0) * 0.8); // oversquare: holds, undersquare: drops
+      rpmCurve = topHold + (1.0 - topHold) * Math.max(0, 1.0 - (rpmNorm - peakNorm * 1.4) * 3);
+    }
+
     return 50 * rpmCurve * gearFactor * throttleRamp * rs * userThrottleMult;
   }
   return 0;
@@ -1350,10 +1391,13 @@ document.addEventListener('keyup', (e) => {
 });
 
 // ---------- Start / Stop ----------
+const flybyBtn = document.getElementById('flybyBtn');
+
 startBtn.addEventListener('click', () => {
   if (audio.running) {
     audio.stop();
     startBtn.textContent = 'Start Engine'; startBtn.classList.remove('secondary');
+    flybyBtn.disabled = false;
     stopPistonAnimation();
     stopRedlineFlicker(); stopRpmDecay(); redlineIndicator.classList.remove('visible');
     if (autoShiftTimer) { clearTimeout(autoShiftTimer); autoShiftTimer = null; }
@@ -1366,9 +1410,151 @@ startBtn.addEventListener('click', () => {
     audio.start();
     startPistonAnimation();
     startBtn.textContent = 'Stop Engine'; startBtn.classList.add('secondary');
+    flybyBtn.disabled = true; // disable fly-by while engine running
     if (autoGearShift) { currentGear = 1; gearNumberDisplay.textContent = '1'; }
     updateRedlineState();
   }
+});
+
+// Fly-by simulation:
+// Uses the real engine. Automates gain, LP filter, stereo pan, and Doppler RPM.
+//
+// Timeline (~6s):
+//   0-2.5s   INCOMING: bike approaches from RIGHT
+//            - Volume builds from silent to peak
+//            - Stereo pan: +1.0 (far right) → 0 (center)
+//            - Doppler: RPM +5% above base (pitch raised)
+//            - LP filter opens gradually (approaching = brighter)
+//
+//   2.5-3.0s PASS: bike screams past you
+//            - Peak volume, center pan, true RPM, full spectrum
+//
+//   3.0-6.0s OUTGOING: bike disappears to LEFT
+//            - Volume fades to silence
+//            - Stereo pan: 0 (center) → -1.0 (far left)
+//            - Doppler: RPM -8% below base (pitch drops)
+//            - LP filter closes (air absorbs highs = muffled)
+let flybyTimer = null;
+
+flybyBtn.addEventListener('click', () => {
+  if (audio.running) return;
+
+  // Start the real engine
+  audio.start();
+  audio._flybyActive = true;
+  startPistonAnimation();
+  flybyBtn.disabled = true;
+  startBtn.disabled = true;
+  flybyBtn.textContent = 'Incoming...';
+
+  // The bike is ALREADY at high RPM in top gear — not starting from idle.
+  // It's racing at ~80% redline, maybe slight acceleration toward redline.
+  const cruiseRPM = Math.round(config.redlineRpm * 0.78);
+  const peakRPM = Math.round(config.redlineRpm * 0.92);
+  setRPM(cruiseRPM);
+  currentGear = MAX_GEAR;
+  gearNumberDisplay.textContent = MAX_GEAR;
+
+  const t = audio.ctx.currentTime;
+  const passTime = 5.0;  // pass moment at 5s
+  const duration = 8.5;  // total
+
+  // --- Volume: inverse-square-law feel ---
+  // Most of the volume increase happens in the LAST 1-2 seconds
+  // before the pass. It "rushes" at you.
+  const mg = audio.masterGain.gain;
+  mg.cancelScheduledValues(t);
+  mg.setValueAtTime(0.01, t);                            // barely audible, far right
+  mg.setValueAtTime(0.015, t + 0.5);
+  mg.exponentialRampToValueAtTime(0.03, t + 1.5);        // still distant
+  mg.exponentialRampToValueAtTime(0.06, t + 2.5);        // can hear it now
+  mg.exponentialRampToValueAtTime(0.15, t + 3.5);        // getting louder
+  mg.exponentialRampToValueAtTime(0.45, t + 4.3);        // RUSHING at you
+  mg.exponentialRampToValueAtTime(0.85, t + 4.8);        // almost here
+  mg.linearRampToValueAtTime(1.0, t + passTime);         // PASS — peak
+  mg.linearRampToValueAtTime(0.55, t + 5.3);             // just passed (still loud)
+  mg.exponentialRampToValueAtTime(0.15, t + 6.0);        // dropping fast
+  mg.exponentialRampToValueAtTime(0.04, t + 7.0);        // fading
+  mg.exponentialRampToValueAtTime(0.01, t + 8.0);        // distant
+  mg.linearRampToValueAtTime(0.0, t + duration);         // gone
+
+  // --- Stereo: RIGHT → rapid sweep through CENTER → LEFT ---
+  // The pan sweep is NOT linear — it's slow while distant (far right),
+  // then FAST through center at the pass moment (bike zooms past),
+  // then slow again as it recedes to the left.
+  const pan = audio.panner.pan;
+  pan.cancelScheduledValues(t);
+  pan.setValueAtTime(1.0, t);                            // far right
+  pan.linearRampToValueAtTime(0.85, t + 2.0);            // still mostly right
+  pan.linearRampToValueAtTime(0.5, t + 4.0);             // approaching
+  pan.linearRampToValueAtTime(0.0, t + passTime);        // CENTER — pass
+  pan.linearRampToValueAtTime(-0.5, t + 5.3);            // rapid sweep left
+  pan.linearRampToValueAtTime(-0.85, t + 6.5);           // receding left
+  pan.linearRampToValueAtTime(-1.0, t + duration);       // far left
+
+  // --- LP filter: muffled → bright at pass → muffled ---
+  const lp = audio.exhaustLP.frequency;
+  lp.cancelScheduledValues(t);
+  lp.setValueAtTime(600, t);                             // distant = only bass travels
+  lp.linearRampToValueAtTime(900, t + 2.0);
+  lp.linearRampToValueAtTime(2000, t + 3.5);
+  lp.exponentialRampToValueAtTime(5500, t + passTime);   // FULL spectrum at pass
+  lp.linearRampToValueAtTime(2000, t + 5.8);             // closing fast
+  lp.linearRampToValueAtTime(700, t + 7.0);              // muffled
+  lp.linearRampToValueAtTime(350, t + duration);         // just a rumble
+
+  // --- RPM + Doppler via rAF ---
+  const flybyStart = performance.now();
+  function flybyTick() {
+    const elapsed = (performance.now() - flybyStart) / 1000;
+
+    if (elapsed >= duration || !audio.running) {
+      audio._flybyActive = false;
+      audio.stop();
+      stopPistonAnimation();
+      startBtn.textContent = 'Start Engine'; startBtn.classList.remove('secondary');
+      flybyBtn.disabled = false;
+      startBtn.disabled = false;
+      flybyBtn.textContent = 'Fly-by';
+      setRPM(IDLE_RPM);
+      if (autoGearShift) { currentGear = 1; gearNumberDisplay.textContent = '1'; }
+      else { currentGear = 0; gearNumberDisplay.textContent = 'N'; }
+      return;
+    }
+
+    flybyBtn.textContent = elapsed < passTime ? 'Incoming...' : 'Passing...';
+
+    // RPM: slight acceleration during approach (78% → 92% redline)
+    // Doppler: approaching = pitch slightly up, receding = pitch drops
+    let targetRPM;
+    if (elapsed < passTime) {
+      // Gradual acceleration + Doppler up
+      const progress = elapsed / passTime;
+      const baseRPM = cruiseRPM + (peakRPM - cruiseRPM) * progress;
+      // Doppler approach: +4% at start, 0% at pass
+      // The pitch drop happens FAST near the pass — not linear
+      const dopplerApproach = 0.04 * Math.pow(1 - progress, 2);
+      targetRPM = Math.round(baseRPM * (1 + dopplerApproach));
+    } else {
+      // Receding: RPM drops (off throttle, engine braking) + Doppler drops pitch
+      const recedeProgress = (elapsed - passTime) / (duration - passTime);
+      // RPM decays from peak toward ~40% redline (coasting away)
+      const coastRPM = config.redlineRpm * 0.4;
+      const baseRPM = peakRPM - (peakRPM - coastRPM) * recedeProgress;
+      // Doppler drops fast at first, then slows
+      const dopplerRecede = 0.07 * Math.sqrt(recedeProgress);
+      targetRPM = Math.round(baseRPM * (1 - dopplerRecede));
+    }
+
+    config.rpm = targetRPM;
+    rpmSlider.value = targetRPM;
+    rpmValue.textContent = targetRPM;
+    rpmDisplay.textContent = targetRPM;
+    updateDualSlider();
+
+    flybyTimer = requestAnimationFrame(flybyTick);
+  }
+  flybyTimer = requestAnimationFrame(flybyTick);
 });
 
 // ---------- Sliders ----------
@@ -1471,6 +1657,20 @@ throttleSensSlider.addEventListener('input', () => {
   userThrottleMult = v / 100;
 });
 
+// Bore/Stroke ratio: affects exhaust pitch and acceleration curve
+// Oversquare (>1.0) = high-revving, top-end power, higher exhaust pitch
+// Undersquare (<1.0) = torquey, low-end grunt, deeper exhaust note
+const boreStrokeSlider = document.getElementById('boreStrokeSlider');
+const boreStrokeValue = document.getElementById('boreStrokeValue');
+
+boreStrokeSlider.addEventListener('input', () => {
+  const v = parseFloat(boreStrokeSlider.value);
+  boreStrokeValue.textContent = v.toFixed(2);
+  config.boreStroke = v;
+  // Regenerate wavetable (bore/stroke affects exhaust pulse pitch)
+  if (audio.ctx && audio.running) audio._startSource();
+});
+
 // Valves per cylinder: 2V = fewer harmonics (simpler sound), 4V = richer high-end
 [valves2Btn, valves4Btn].forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1496,14 +1696,17 @@ presetSelect.addEventListener('change', () => {
   config.redlineRpm = p.redline;
   config.limiterRpm = p.limiter;
   config.revSpeed = p.revSpeed;
+  config.boreStroke = p.boreStroke;
   IDLE_RPM = p.idle;
 
   redlineSlider.value = p.redline;
   limiterSlider.value = p.limiter;
   idleSlider.value = p.idle;
+  boreStrokeSlider.value = p.boreStroke;
   redlineValueSpan.textContent = p.redline;
   limiterValueSpan.textContent = p.limiter;
   idleValueSpan.textContent = p.idle;
+  boreStrokeValue.textContent = p.boreStroke.toFixed(2);
 
   // Reset RPM to new idle
   setRPM(p.idle);
@@ -1873,15 +2076,18 @@ function init() {
   config.redlineRpm = p.redline;
   config.limiterRpm = p.limiter;
   config.revSpeed = p.revSpeed;
+  config.boreStroke = p.boreStroke;
   IDLE_RPM = p.idle;
   config.rpm = IDLE_RPM;
   cylinderSelect.value = p.cylinders;
   redlineSlider.value = p.redline;
   limiterSlider.value = p.limiter;
   idleSlider.value = p.idle;
+  boreStrokeSlider.value = p.boreStroke;
   redlineValueSpan.textContent = p.redline;
   limiterValueSpan.textContent = p.limiter;
   idleValueSpan.textContent = p.idle;
+  boreStrokeValue.textContent = p.boreStroke.toFixed(2);
   rpmSlider.value = IDLE_RPM;
   rpmValue.textContent = IDLE_RPM;
   rpmDisplay.textContent = IDLE_RPM;

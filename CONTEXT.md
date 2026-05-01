@@ -214,8 +214,25 @@ User-adjustable parameters that modify the audio engine in real-time:
 - **Whine** (slider 0-100): Controls gear whine volume
 - **Pipe Length** (slider 1-10): Changes feedback delay time (short = high resonance, long = deep)
 - **Throttle Sensitivity** (slider 10-200): User override multiplier on top of preset revSpeed
+- **Bore/Stroke Ratio** (slider 0.70-1.60): Affects exhaust pulse frequency and acceleration curve shape
+  - Undersquare (<1.0): deeper tone, strong low-end torque, drops off at high RPM
+  - Oversquare (>1.0): higher-pitched, weak low-end, comes alive on top
+  - Auto-sets from preset's real bore/stroke measurements
 
-### 6. Piston & Crank Animation
+### 6. Fly-by Simulation
+
+Simulates a motorcycle racing past the listener from right to left.
+
+**How it works:** Starts the real engine (all UI active), automates gain/filter/panner/RPM over ~8.5 seconds.
+
+**Timeline:**
+- **0-5s (Approach)**: Bike already at ~78% redline in top gear, slight acceleration to 92%. Volume follows inverse-square curve (barely audible → rushes at you in last 1-2s). Stereo pans from full right toward center. LP filter opens (muffled → bright). Doppler raises pitch +4%.
+- **5s (Pass)**: Peak volume, center pan, full spectrum, true pitch.
+- **5-8.5s (Recede)**: RPM drops (off throttle, engine braking from 92% → 40% redline). Volume fades. Stereo sweeps to full left. LP filter closes (air absorption → distant rumble). Doppler drops pitch -7%.
+
+**Controls:** Fly-by button beside Start Engine. Disabled while engine running, and vice versa. Uses `StereoPannerNode` for L/R sweep.
+
+### 7. Piston & Crank Animation
 
 Canvas-based real-time animation showing all cylinders in horizontal layout:
 - Each cylinder gets its own row, stacked vertically
@@ -230,14 +247,14 @@ Canvas-based real-time animation showing all cylinders in horizontal layout:
 - Runs only when engine is started, stops when engine stops
 - HiDPI aware (uses `devicePixelRatio`)
 
-### 7. Firing Pattern Visualization
+### 8. Firing Pattern Visualization
 
 - Horizontal bar representing one engine cycle (0°-720° or 0°-360°)
 - Color-coded dots at each cylinder's firing position
 - Degree labels update for 2-stroke vs 4-stroke
 - Recalculates on resize
 
-### 8. Readout Panel
+### 9. Readout Panel
 
 4-cell grid showing:
 - Cycle duration (ms)
@@ -249,7 +266,7 @@ Canvas-based real-time animation showing all cylinders in horizontal layout:
 
 ```
 revsynth/
-├── index.html     — entire application (HTML + CSS + JS, ~1900 lines)
+├── index.html     — entire application (HTML + CSS + JS, ~2100 lines)
 ├── wrangler.json  — Cloudflare Workers config for static asset serving
 ├── CONTEXT.md     — this file (project context for AI agents)
 ├── README.md      — project documentation
