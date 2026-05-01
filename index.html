@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>Motorcycle Engine Sound Simulator</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    /* ===== Pico CSS variable overrides ===== */
+    :root {
+      --pico-primary: #ff6b35;
+      --pico-primary-hover: #ff8555;
+      --pico-primary-inverse: #fff;
+      --pico-font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    body { padding: 1rem 0; }
+
+    /* ===== RPM display ===== */
+    .rpm-display { text-align: center; margin-bottom: 0.5rem; }
+
+    .rpm-number {
+      font-family: 'Courier New', monospace;
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: var(--pico-primary);
+      line-height: 1;
+    }
+
+    .rpm-label {
+      font-size: 0.7rem;
+      color: var(--pico-muted-color);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    /* ===== Redline states ===== */
+    .rpm-card { transition: background 0.05s, border-color 0.05s, box-shadow 0.05s; }
+
+    .rpm-card.redline-flash {
+      background: #3a0a0a !important;
+      border-color: #e94560 !important;
+      box-shadow: 0 0 24px rgba(233,69,96,0.4);
+    }
+    .rpm-card.redline-flash .rpm-number { color: #ff1744 !important; }
+    .rpm-card.redline-warn .rpm-number { color: #ff5252; }
+
+    .redline-indicator {
+      font-size: 0.75rem;
+      color: #e94560;
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      opacity: 0;
+      transition: opacity 0.2s;
+      margin: 0.25rem 0;
+    }
+    .redline-indicator.visible { opacity: 1; }
+
+    /* ===== Triple-range slider ===== */
+    .triple-slider {
+      position: relative;
+      height: 2.2rem;
+    }
+
+    .triple-slider-track {
+      position: absolute;
+      top: 50%; left: 0; right: 0;
+      height: 6px;
+      transform: translateY(-50%);
+      border-radius: 3px;
+      background: var(--pico-secondary-background);
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .triple-slider-track .fill {
+      position: absolute; top: 0; height: 100%; border-radius: 3px;
+    }
+    .fill-rpm { left: 0; background: var(--pico-primary); }
+    .fill-warn { background: linear-gradient(90deg, transparent, #ff9800); opacity: 0.5; }
+    .fill-lim { right: 0; background: linear-gradient(90deg, #e94560, #ff1744); opacity: 0.8; }
+
+    .triple-slider input[type="range"] {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      margin: 0; background: transparent;
+      -webkit-appearance: none; appearance: none;
+      pointer-events: none; outline: none;
+    }
+
+    .triple-slider input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      cursor: pointer; pointer-events: all;
+      border: 2px solid;
+    }
+    .triple-slider input[type="range"]::-moz-range-thumb {
+      width: 16px; height: 16px; border-radius: 50%;
+      cursor: pointer; pointer-events: all; border: 2px solid;
+    }
+
+    /* RPM thumb hidden (indicator only) */
+    #rpmSlider { pointer-events: none !important; }
+    #rpmSlider::-webkit-slider-thumb { width:0;height:0;border:none;pointer-events:none; }
+    #rpmSlider::-moz-range-thumb { width:0;height:0;border:none;pointer-events:none; }
+
+    #redlineSlider::-webkit-slider-thumb { background:#ff9800; border-color:#cc7a00; }
+    #redlineSlider::-moz-range-thumb { background:#ff9800; border-color:#cc7a00; }
+    #limiterSlider::-webkit-slider-thumb { background:#e94560; border-color:#b8304a; }
+    #limiterSlider::-moz-range-thumb { background:#e94560; border-color:#b8304a; }
+
+    .triple-slider input::-webkit-slider-runnable-track { height:6px; background:transparent; }
+    .triple-slider input::-moz-range-track { height:6px; background:transparent; }
+
+    .slider-labels {
+      display: flex; justify-content: space-between;
+      font-size: 0.75rem; font-family: 'Courier New', monospace;
+      margin-top: 0.15rem;
+    }
+    .slider-labels .lbl-rpm { color: var(--pico-primary); }
+    .slider-labels .lbl-red { color: #ff9800; }
+    .slider-labels .lbl-lim { color: #e94560; }
+
+    /* ===== Toggles row ===== */
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .toggle-item {
+      display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+    }
+    .toggle-item small {
+      font-size: 0.7rem; color: var(--pico-muted-color);
+    }
+
+    /* ===== Gear display ===== */
+    .gear-bar {
+      display: flex; align-items: center; justify-content: center;
+      gap: 1rem; margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--pico-muted-border-color);
+    }
+    .gear-number {
+      font-family: 'Courier New', monospace;
+      font-size: 2.2rem; font-weight: 700;
+      color: #00d2ff;
+      min-width: 2ch; text-align: center;
+      line-height: 1;
+      transition: color 0.15s, transform 0.15s;
+    }
+    .gear-number.shifting { color: var(--pico-primary); transform: scale(1.3); }
+    .gear-shift-indicator {
+      font-size: 0.75rem; color: #00d2ff;
+      font-family: 'Courier New', monospace;
+      opacity: 0; transition: opacity 0.15s;
+      text-align: center;
+    }
+    .gear-shift-indicator.visible { opacity: 1; }
+
+    /* ===== Keyboard hints ===== */
+    .kb-hints {
+      display: flex; justify-content: center; gap: 1rem;
+      flex-wrap: wrap; margin-top: 0.5rem;
+    }
+    .kb-hints span { font-size: 0.7rem; color: var(--pico-muted-color); }
+
+    /* ===== Stroke toggle ===== */
+    .stroke-group {
+      display: flex; border-radius: var(--pico-border-radius);
+      overflow: hidden; border: 1px solid var(--pico-muted-border-color);
+    }
+    .stroke-group button {
+      flex: 1; margin: 0; border: none; border-radius: 0;
+      padding: 0.4rem 0.8rem; font-size: 0.85rem;
+      background: transparent; color: var(--pico-muted-color);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .stroke-group button.active {
+      background: var(--pico-primary-background);
+      color: var(--pico-primary);
+      font-weight: 600;
+    }
+
+    /* ===== Crank angles ===== */
+    .crank-angles { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .crank-chip {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      padding: 0.2rem 0.5rem;
+      border: 1px solid var(--pico-muted-border-color);
+      border-radius: var(--pico-border-radius);
+      font-size: 0.85rem;
+    }
+    .crank-chip input {
+      width: 3.5rem; padding: 0.15rem 0.25rem;
+      background: transparent; border: none;
+      color: var(--pico-primary);
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem; text-align: center;
+      outline: none;
+    }
+    .crank-chip .cyl-label { font-weight: 600; }
+
+    /* ===== Firing pattern ===== */
+    .firing-viz {
+      position: relative; height: 70px;
+      background: var(--pico-card-sectioning-background-color);
+      border-radius: var(--pico-border-radius);
+      overflow: hidden;
+    }
+    .firing-viz .bar {
+      position: absolute; top: 10px; left: 16px; right: 16px;
+      height: 4px; background: var(--pico-muted-border-color);
+      border-radius: 2px;
+    }
+    .firing-viz .deg-labels {
+      position: absolute; top: 18px; left: 16px; right: 16px;
+      display: flex; justify-content: space-between;
+      font-size: 0.6rem; color: var(--pico-muted-color);
+    }
+    .firing-dot {
+      position: absolute; width: 14px; height: 14px;
+      border-radius: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; font-weight: 700; color: #fff;
+      transition: left 0.3s ease;
+    }
+
+    /* ===== Readout grid ===== */
+    .readout {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 0.5rem; margin-top: 0.75rem;
+    }
+    .readout-cell {
+      text-align: center; padding: 0.5rem;
+      background: var(--pico-card-sectioning-background-color);
+      border-radius: var(--pico-border-radius);
+    }
+    .readout-cell .r-label {
+      font-size: 0.65rem; color: var(--pico-muted-color);
+      text-transform: uppercase;
+    }
+    .readout-cell .r-val {
+      font-family: 'Courier New', monospace;
+      font-size: 1rem; color: var(--pico-primary);
+      margin-top: 0.1rem;
+    }
+
+    /* ===== Piston animation ===== */
+    .piston-canvas {
+      width: 100%;
+      height: 220px;
+      display: block;
+      border-radius: var(--pico-border-radius);
+      background: var(--pico-card-sectioning-background-color);
+    }
+
+    /* ===== Virtual Joypad (mobile only) ===== */
+    .vpad {
+      display: none; /* hidden by default, shown via JS on touch devices */
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 0.75rem 1rem;
+      padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+      background: rgba(10, 10, 20, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .vpad-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .vpad-gear {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .vpad-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      color: #ccc;
+      font-family: system-ui, sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .vpad-btn:active, .vpad-btn.active {
+      background: rgba(255,107,53,0.2);
+      border-color: var(--pico-primary);
+      color: var(--pico-primary);
+    }
+
+    .vpad-btn-gear {
+      width: 64px;
+      height: 52px;
+      font-size: 1.3rem;
+    }
+
+    .vpad-btn-throttle {
+      flex: 1;
+      height: 110px;
+      font-size: 1rem;
+      letter-spacing: 1px;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .vpad-btn-throttle .throttle-icon {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .vpad-active .vpad { display: flex; }
+    .vpad-active main { padding-bottom: 140px; } /* space for joypad */
+
+    /* Hide keyboard hints on mobile */
+    .vpad-active .kb-hints { display: none; }
+
+    /* ===== Misc ===== */
+    article { margin-bottom: 0; }
+    h2 { font-size: 0.9rem; margin-bottom: 0.75rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; align-items: center; }
+    .grid-3 { display: grid; grid-template-columns: auto 1fr auto; gap: 0.75rem; align-items: center; }
+    label { margin-bottom: 0; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <hgroup style="text-align:center; margin-bottom:1.5rem;">
+      <h1>Motorcycle Engine Sound Simulator</h1>
+      <p>Tweak engine parameters and hear the difference</p>
+    </hgroup>
+
+    <!-- Piston & Crank Animation -->
+    <article>
+      <canvas class="piston-canvas" id="pistonCanvas"></canvas>
+    </article>
+
+    <!-- Start/Stop -->
+    <button id="startBtn" style="width:100%; margin-bottom:1rem;">Start Engine</button>
+
+    <!-- RPM & Controls -->
+    <article class="rpm-card" id="rpmCard">
+      <div class="rpm-display">
+        <div class="rpm-number" id="rpmDisplay">1500</div>
+        <div class="rpm-label">RPM</div>
+      </div>
+
+      <div class="triple-slider">
+        <div class="triple-slider-track">
+          <div class="fill fill-rpm" id="trackRpm"></div>
+          <div class="fill fill-warn" id="trackWarning"></div>
+          <div class="fill fill-lim" id="trackLimiter"></div>
+        </div>
+        <input type="range" class="dual-range" id="rpmSlider" min="500" max="14000" value="1500" step="50">
+        <input type="range" class="dual-range" id="redlineSlider" min="500" max="14000" value="9000" step="100">
+        <input type="range" class="dual-range" id="limiterSlider" min="500" max="14000" value="11000" step="100">
+      </div>
+      <div class="slider-labels">
+        <span class="lbl-rpm">RPM: <strong id="rpmValue">1500</strong></span>
+        <span class="lbl-red">Redline: <strong id="redlineValue">9000</strong></span>
+        <span class="lbl-lim">Limiter: <strong id="limiterValue">11000</strong></span>
+      </div>
+
+      <div class="redline-indicator" id="redlineIndicator">REV LIMITER ACTIVE</div>
+
+      <div class="toggle-grid" style="grid-template-columns: 1fr 1fr;">
+        <label class="toggle-item">
+          <small>Auto Decay</small>
+          <input type="checkbox" id="engineBrakingToggle" role="switch" checked>
+        </label>
+        <label class="toggle-item">
+          <small>Auto Shift</small>
+          <input type="checkbox" id="gearToggle" role="switch">
+        </label>
+      </div>
+
+      <div class="gear-bar">
+        <small style="color:var(--pico-muted-color)">GEAR</small>
+        <span class="gear-number" id="gearNumber">N</span>
+        <span class="gear-shift-indicator" id="gearShiftIndicator"></span>
+      </div>
+
+      <div class="kb-hints">
+        <span><kbd>&rarr;</kbd> Throttle</span>
+        <span><kbd>&uarr;</kbd> Gear Up</span>
+        <span><kbd>&darr;</kbd> Gear Down</span>
+      </div>
+    </article>
+
+    <!-- Engine Configuration -->
+    <article>
+      <h2>Engine Configuration</h2>
+
+      <div class="grid-2">
+        <label for="presetSelect">Preset</label>
+        <select id="presetSelect">
+          <option value="single">Single Cylinder</option>
+          <option value="vtwin90">V-Twin 90° (Ducati)</option>
+          <option value="vtwin60">V-Twin 60° (Moto Guzzi)</option>
+          <option value="parallel270">Parallel Twin 270° (MT-07)</option>
+          <option value="parallel180">Parallel Twin 180°</option>
+          <option value="triple">Inline Triple (Triumph)</option>
+          <option value="inline4">Inline-4 Even Fire</option>
+          <option value="crossplane4">Crossplane I4 (R1)</option>
+          <option value="v4">V4 90° (Panigale)</option>
+          <option value="flat6">Flat-6 (Gold Wing)</option>
+          <option value="custom" selected>Custom</option>
+        </select>
+      </div>
+
+      <div class="grid-2" style="margin-top:0.75rem;">
+        <label for="cylinderSelect">Cylinders</label>
+        <select id="cylinderSelect">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="6">6</option>
+        </select>
+      </div>
+
+      <div class="grid-2" style="margin-top:0.75rem;">
+        <label>Stroke Type</label>
+        <div class="stroke-group">
+          <button id="stroke4" class="active" data-stroke="4">4-Stroke</button>
+          <button id="stroke2" data-stroke="2">2-Stroke</button>
+        </div>
+      </div>
+
+      <label style="margin-top:0.75rem; display:block;">Crank Angles</label>
+      <div class="crank-angles" id="crankAngles"></div>
+    </article>
+
+    <!-- Firing Pattern -->
+    <article>
+      <h2>Firing Pattern</h2>
+      <div class="firing-viz" id="firingViz">
+        <div class="bar"></div>
+        <div class="deg-labels">
+          <span>0°</span><span>180°</span><span>360°</span><span>540°</span><span>720°</span>
+        </div>
+      </div>
+      <div class="readout" id="readout"></div>
+    </article>
+  </main>
+
+  <!-- Virtual Joypad (mobile) -->
+  <div class="vpad" id="vpad">
+    <div class="vpad-inner">
+      <div class="vpad-gear">
+        <button class="vpad-btn vpad-btn-gear" id="vpadUp" aria-label="Gear Up">&uarr;</button>
+        <button class="vpad-btn vpad-btn-gear" id="vpadDown" aria-label="Gear Down">&darr;</button>
+      </div>
+      <button class="vpad-btn vpad-btn-throttle" id="vpadThrottle" aria-label="Throttle">
+        <span class="throttle-icon">&rarr;</span>
+        <span>THROTTLE</span>
+      </button>
+    </div>
+  </div>
+
+<script>
+// ============================================================
+//  Color palette for cylinders
+// ============================================================
+const CYL_COLORS = ['#e94560', '#00d2ff', '#00e676', '#ffab00', '#d500f9', '#ff6d00'];
+
+// ============================================================
+//  Engine presets
+// ============================================================
+const PRESETS = {
+  single:       { angles: [0],                  cylinders: 1, stroke: 4 },
+  vtwin90:      { angles: [0, 90],              cylinders: 2, stroke: 4 },
+  vtwin60:      { angles: [0, 60],              cylinders: 2, stroke: 4 },
+  parallel270:  { angles: [0, 270],             cylinders: 2, stroke: 4 },
+  parallel180:  { angles: [0, 180],             cylinders: 2, stroke: 4 },
+  triple:       { angles: [0, 240, 480],        cylinders: 3, stroke: 4 },
+  inline4:      { angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4 },
+  crossplane4:  { angles: [0, 270, 180, 450],   cylinders: 4, stroke: 4 },
+  v4:           { angles: [0, 90, 360, 450],    cylinders: 4, stroke: 4 },
+  flat6:        { angles: [0, 120, 240, 360, 480, 600], cylinders: 6, stroke: 4 },
+};
+
+// ============================================================
+//  EngineConfig
+// ============================================================
+class EngineConfig {
+  constructor() {
+    this.rpm = 800;
+    this.cylinders = 1;
+    this.crankAngles = [0];
+    this.strokeType = 4;
+    this.redlineRpm = 9000;
+    this.limiterRpm = 11000;
+  }
+
+  get redlineProximity() {
+    if (this.rpm < this.redlineRpm) return 0;
+    const range = this.limiterRpm - this.redlineRpm;
+    if (range <= 0) return 1;
+    return Math.min(1, (this.rpm - this.redlineRpm) / range);
+  }
+
+  get isInRedline() { return this.rpm >= this.redlineRpm && this.rpm < this.limiterRpm; }
+  get isAtLimiter() { return this.rpm >= this.limiterRpm; }
+  get isAtRedline() { return this.isAtLimiter; }
+  get cycleDegrees() { return this.strokeType === 4 ? 720 : 360; }
+  get cycleDuration() { return (this.strokeType === 4 ? 120 : 60) / this.rpm; }
+
+  getFiringSchedule() {
+    const schedule = this.crankAngles.map((angle, i) => ({
+      cylinder: i,
+      angleDeg: ((angle % this.cycleDegrees) + this.cycleDegrees) % this.cycleDegrees,
+      offsetSec: (angle / this.cycleDegrees) * this.cycleDuration,
+    }));
+    schedule.sort((a, b) => a.offsetSec - b.offsetSec);
+    return schedule;
+  }
+
+  getFiringIntervals() {
+    const sched = this.getFiringSchedule();
+    if (sched.length === 0) return [];
+    const intervals = [];
+    for (let i = 1; i < sched.length; i++) {
+      intervals.push((sched[i].offsetSec - sched[i - 1].offsetSec) * 1000);
+    }
+    const wrap = (this.cycleDuration - sched[sched.length - 1].offsetSec + sched[0].offsetSec) * 1000;
+    intervals.push(wrap);
+    return intervals;
+  }
+}
+
+// ============================================================
+//  EngineAudio — Wavetable synthesis
+// ============================================================
+class EngineAudio {
+  constructor(config) {
+    this.config = config;
+    this.ctx = null;
+    this.running = false;
+    this.source = null;
+    this.updateID = null;
+    this._lastConfigHash = '';
+  }
+
+  static get BUFFER_LEN() { return 8192; }
+
+  get _baseRPM() {
+    const sr = this.ctx ? this.ctx.sampleRate : 44100;
+    const bufDuration = EngineAudio.BUFFER_LEN / sr;
+    const divisor = this.config.strokeType === 4 ? 120 : 60;
+    return (1.0 / bufDuration) * divisor;
+  }
+
+  _generateCycleBuffer() {
+    const ctx = this.ctx;
+    const sr = ctx.sampleRate;
+    const len = EngineAudio.BUFFER_LEN;
+    const buf = ctx.createBuffer(1, len, sr);
+    const data = buf.getChannelData(0);
+    const cfg = this.config;
+    const cycleDeg = cfg.cycleDegrees;
+    const schedule = cfg.getFiringSchedule();
+
+    for (let i = 0; i < len; i++) data[i] = 0;
+
+    schedule.forEach((entry, idx) => {
+      const angle = entry.angleDeg;
+      const centerSample = Math.floor((angle / cycleDeg) * len);
+      const pulseSamples = Math.floor(len * 0.18);
+      const decayRate = 6.0 + idx * 0.5;
+      const fundFreq = 55 + idx * 6;
+
+      for (let j = 0; j < pulseSamples; j++) {
+        const writeIdx = (centerSample + j) % len;
+        const t = j / sr;
+        const envelope = Math.exp(-t * decayRate / (pulseSamples / sr));
+        const phase = 2 * Math.PI * fundFreq * t;
+        const sub = 0.8 * Math.sin(0.5 * phase);
+        const h1 = 1.0 * Math.sin(phase);
+        const h2 = 0.7 * Math.sin(2.0 * phase);
+        const h3 = 0.4 * Math.sin(3.02 * phase + 0.4);
+        const h4 = 0.22 * Math.sin(4.05 * phase);
+        const h5 = 0.12 * Math.sin(5.1 * phase + 0.8);
+        const h6 = 0.07 * Math.sin(6.15 * phase);
+        const pistonPhase = 2 * Math.PI * (j / pulseSamples);
+        const piston = 0.35 * Math.cos(2 * pistonPhase);
+        const noise = (Math.random() * 2 - 1) * 0.08;
+        const sample = (sub + h1 + h2 + h3 + h4 + h5 + h6 + piston + noise) * envelope;
+        data[writeIdx] += sample;
+      }
+    });
+
+    let peak = 0;
+    for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(data[i]));
+    if (peak > 0) {
+      const norm = 0.8 / peak;
+      for (let i = 0; i < len; i++) data[i] *= norm;
+    }
+    return buf;
+  }
+
+  _makeDistortionCurve(drive) {
+    const n = 8192;
+    const curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / n - 1;
+      curve[i] = x >= 0 ? Math.tanh(x * drive) : Math.tanh(x * drive * 1.15) * 0.95;
+    }
+    return curve;
+  }
+
+  _buildGraph() {
+    const ctx = this.ctx;
+
+    this.masterGain = ctx.createGain();
+    this.masterGain.gain.value = 0.8;
+    this.compressor = ctx.createDynamicsCompressor();
+    this.compressor.threshold.value = -10;
+    this.compressor.knee.value = 8;
+    this.compressor.ratio.value = 4;
+    this.compressor.attack.value = 0.003;
+    this.compressor.release.value = 0.1;
+    this.masterGain.connect(this.compressor);
+    this.compressor.connect(ctx.destination);
+
+    this.exhaustBus = ctx.createGain();
+    this.exhaustBus.gain.value = 1.0;
+
+    this.waveshaper = ctx.createWaveShaper();
+    this.waveshaper.curve = this._makeDistortionCurve(2.5);
+    this.waveshaper.oversample = '4x';
+
+    this.pipeDelay = ctx.createDelay(0.02);
+    this.pipeDelay.delayTime.value = 0.0045;
+    this.pipeFeedback = ctx.createGain();
+    this.pipeFeedback.gain.value = 0.25;
+    this.pipeLPF = ctx.createBiquadFilter();
+    this.pipeLPF.type = 'lowpass';
+    this.pipeLPF.frequency.value = 1800;
+    this.pipeDelay.connect(this.pipeLPF);
+    this.pipeLPF.connect(this.pipeFeedback);
+    this.pipeFeedback.connect(this.pipeDelay);
+
+    this.eqSub = ctx.createBiquadFilter();
+    this.eqSub.type = 'lowshelf'; this.eqSub.frequency.value = 80; this.eqSub.gain.value = 8;
+    this.eqLow = ctx.createBiquadFilter();
+    this.eqLow.type = 'peaking'; this.eqLow.frequency.value = 140; this.eqLow.Q.value = 0.6; this.eqLow.gain.value = 7;
+    this.eqMid = ctx.createBiquadFilter();
+    this.eqMid.type = 'peaking'; this.eqMid.frequency.value = 500; this.eqMid.Q.value = 1.0; this.eqMid.gain.value = 2;
+    this.exhaustLP = ctx.createBiquadFilter();
+    this.exhaustLP.type = 'lowpass'; this.exhaustLP.frequency.value = 900; this.exhaustLP.Q.value = 2.0;
+    this.highCut = ctx.createBiquadFilter();
+    this.highCut.type = 'highshelf'; this.highCut.frequency.value = 3000; this.highCut.gain.value = -8;
+
+    this.exhaustBus.connect(this.waveshaper);
+    const dryMix = ctx.createGain(); dryMix.gain.value = 0.65;
+    this.waveshaper.connect(dryMix); dryMix.connect(this.eqSub);
+    const wetMix = ctx.createGain(); wetMix.gain.value = 0.45;
+    this.waveshaper.connect(this.pipeDelay); this.pipeDelay.connect(wetMix); wetMix.connect(this.eqSub);
+    this.eqSub.connect(this.eqLow);
+    this.eqLow.connect(this.eqMid);
+    this.eqMid.connect(this.exhaustLP);
+    this.exhaustLP.connect(this.highCut);
+    this.highCut.connect(this.masterGain);
+
+    // Mechanical rumble
+    this.mechGain = ctx.createGain(); this.mechGain.gain.value = 0;
+    this.mechOsc1 = ctx.createOscillator(); this.mechOsc1.type = 'sine'; this.mechOsc1.frequency.value = 22;
+    const mg1 = ctx.createGain(); mg1.gain.value = 1.2;
+    this.mechOsc1.connect(mg1); mg1.connect(this.mechGain);
+    this.mechOsc2 = ctx.createOscillator(); this.mechOsc2.type = 'triangle'; this.mechOsc2.frequency.value = 44;
+    const mg2 = ctx.createGain(); mg2.gain.value = 0.2;
+    this.mechOsc2.connect(mg2); mg2.connect(this.mechGain);
+    this.mechLP = ctx.createBiquadFilter(); this.mechLP.type = 'lowpass'; this.mechLP.frequency.value = 180; this.mechLP.Q.value = 1.0;
+    this.mechGain.connect(this.mechLP); this.mechLP.connect(this.masterGain);
+    this.mechOsc1.start(); this.mechOsc2.start();
+
+    // Intake noise
+    const noiseLen = Math.floor(ctx.sampleRate * 2);
+    const noiseBuf = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < noiseLen; i++) nd[i] = Math.random() * 2 - 1;
+    this.intakeNoise = ctx.createBufferSource(); this.intakeNoise.buffer = noiseBuf; this.intakeNoise.loop = true;
+    this.intakeGain = ctx.createGain(); this.intakeGain.gain.value = 0;
+    this.intakeBPF = ctx.createBiquadFilter(); this.intakeBPF.type = 'bandpass'; this.intakeBPF.frequency.value = 350; this.intakeBPF.Q.value = 0.5;
+    this.intakeNoise.connect(this.intakeBPF); this.intakeBPF.connect(this.intakeGain); this.intakeGain.connect(this.masterGain);
+    this.intakeNoise.start();
+
+    // Gear whine
+    this.gearWhineEnabled = true;
+    this.whineGain = ctx.createGain(); this.whineGain.gain.value = 0;
+    this.whineOsc1 = ctx.createOscillator(); this.whineOsc1.type = 'sawtooth'; this.whineOsc1.frequency.value = 100;
+    const wg1 = ctx.createGain(); wg1.gain.value = 0.5; this.whineOsc1.connect(wg1); wg1.connect(this.whineGain);
+    this.whineOsc2 = ctx.createOscillator(); this.whineOsc2.type = 'sawtooth'; this.whineOsc2.frequency.value = 200;
+    const wg2 = ctx.createGain(); wg2.gain.value = 0.25; this.whineOsc2.connect(wg2); wg2.connect(this.whineGain);
+    this.whineOsc3 = ctx.createOscillator(); this.whineOsc3.type = 'sine'; this.whineOsc3.frequency.value = 300;
+    const wg3 = ctx.createGain(); wg3.gain.value = 0.12; this.whineOsc3.connect(wg3); wg3.connect(this.whineGain);
+    this.whineBPF = ctx.createBiquadFilter(); this.whineBPF.type = 'bandpass'; this.whineBPF.frequency.value = 2000; this.whineBPF.Q.value = 0.8;
+    this.whinePeak = ctx.createBiquadFilter(); this.whinePeak.type = 'peaking'; this.whinePeak.frequency.value = 3500; this.whinePeak.Q.value = 2.0; this.whinePeak.gain.value = 4;
+    // White noise layer — adds grit/hiss to the gear mesh
+    const whNoiseLen = Math.floor(ctx.sampleRate * 1);
+    const whNoiseBuf = ctx.createBuffer(1, whNoiseLen, ctx.sampleRate);
+    const whd = whNoiseBuf.getChannelData(0);
+    for (let i = 0; i < whNoiseLen; i++) whd[i] = Math.random() * 2 - 1;
+    this.whineNoise = ctx.createBufferSource();
+    this.whineNoise.buffer = whNoiseBuf; this.whineNoise.loop = true;
+    this.whineNoiseGain = ctx.createGain(); this.whineNoiseGain.gain.value = 0.35;
+    this.whineNoise.connect(this.whineNoiseGain); this.whineNoiseGain.connect(this.whineGain);
+    this.whineNoise.start();
+
+    this.whineGain.connect(this.whineBPF); this.whineBPF.connect(this.whinePeak); this.whinePeak.connect(this.masterGain);
+    this.whineOsc1.start(); this.whineOsc2.start(); this.whineOsc3.start();
+  }
+
+  _startSource() {
+    const ctx = this.ctx;
+    const buf = this._generateCycleBuffer();
+    if (this.source) {
+      const old = this.source, oldGain = this.sourceGain;
+      oldGain.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+      setTimeout(() => { try { old.stop(); } catch(e) {} }, 200);
+    }
+    this.source = ctx.createBufferSource();
+    this.source.buffer = buf; this.source.loop = true;
+    this.source.playbackRate.value = this.config.rpm / this._baseRPM;
+    this.sourceGain = ctx.createGain(); this.sourceGain.gain.value = 0;
+    this.sourceGain.gain.setTargetAtTime(1.0, ctx.currentTime, 0.04);
+    this.source.connect(this.sourceGain); this.sourceGain.connect(this.exhaustBus);
+    this.source.start();
+    this._lastConfigHash = this._configHash();
+  }
+
+  _configHash() {
+    return `${this.config.cylinders}_${this.config.crankAngles.join(',')}_${this.config.strokeType}`;
+  }
+
+  _update() {
+    if (!this.running || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const rpm = this.config.rpm;
+    const rpmNorm = rpm / 14000;
+
+    if (this.source) {
+      this.source.playbackRate.setTargetAtTime(rpm / this._baseRPM, t, 0.02);
+    }
+
+    // Rev limiter gain chopping
+    if (this.config.isAtLimiter) {
+      if (!this._limiterID) {
+        this._limiterID = setInterval(() => {
+          if (!this.ctx || !this.sourceGain) return;
+          const now = this.ctx.currentTime;
+          if (Math.random() < 0.6) {
+            const cutDuration = 0.008 + Math.random() * 0.015;
+            this.sourceGain.gain.setValueAtTime(0.1, now);
+            this.sourceGain.gain.setValueAtTime(1.0, now + cutDuration);
+          }
+        }, 20 + Math.random() * 15);
+      }
+    } else {
+      if (this._limiterID) {
+        clearInterval(this._limiterID); this._limiterID = null;
+        if (this.sourceGain) { this.sourceGain.gain.cancelScheduledValues(t); this.sourceGain.gain.setTargetAtTime(1.0, t, 0.01); }
+      }
+    }
+
+    const firingFreq = (rpm / 60) * this.config.cylinders / (this.config.strokeType === 4 ? 2 : 1);
+    this.exhaustLP.frequency.setTargetAtTime(700 + rpmNorm * 3500, t, 0.04);
+    this.waveshaper.curve = this._makeDistortionCurve(2.0 + rpmNorm * 3.0);
+    this.pipeDelay.delayTime.setTargetAtTime(Math.max(0.002, 0.005 - rpmNorm * 0.0025), t, 0.04);
+
+    const mechBase = Math.max(20, firingFreq * 0.5);
+    this.mechOsc1.frequency.setTargetAtTime(mechBase, t, 0.06);
+    this.mechOsc2.frequency.setTargetAtTime(mechBase * 2, t, 0.06);
+    this.mechGain.gain.setTargetAtTime(0.04 + 0.12 * Math.max(0, 1 - rpmNorm * 2.5), t, 0.06);
+    this.mechLP.frequency.setTargetAtTime(100 + rpmNorm * 400, t, 0.06);
+
+    this.intakeGain.gain.setTargetAtTime(0.008 + rpmNorm * 0.05, t, 0.06);
+    this.intakeBPF.frequency.setTargetAtTime(250 + rpmNorm * 900, t, 0.06);
+
+    if (this.gearWhineEnabled) {
+      const TEETH = 16;
+      const meshFreq = (rpm / 60) * TEETH;
+      const f1 = Math.max(60, Math.min(meshFreq, 4500));
+      this.whineOsc1.frequency.setTargetAtTime(f1, t, 0.03);
+      this.whineOsc2.frequency.setTargetAtTime(f1 * 1.5, t, 0.03);
+      this.whineOsc3.frequency.setTargetAtTime(f1 * 2, t, 0.03);
+      this.whineGain.gain.setTargetAtTime(0.005 + rpmNorm * rpmNorm * 0.12, t, 0.04);
+      this.whineBPF.frequency.setTargetAtTime(Math.max(500, Math.min(f1 * 1.5, 8000)), t, 0.04);
+    } else {
+      this.whineGain.gain.setTargetAtTime(0, t, 0.04);
+    }
+
+    const hash = this._configHash();
+    if (hash !== this._lastConfigHash) this._startSource();
+    this.updateID = setTimeout(() => this._update(), 40);
+  }
+
+  start() {
+    if (this.running) return;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this._buildGraph();
+    this._startSource();
+    this.running = true;
+    this._update();
+  }
+
+  stop() {
+    this.running = false;
+    if (this.updateID) { clearTimeout(this.updateID); this.updateID = null; }
+    if (this._limiterID) { clearInterval(this._limiterID); this._limiterID = null; }
+    if (this.source) { try { this.source.stop(); } catch(e) {} this.source = null; }
+    if (this.ctx) { this.ctx.close(); this.ctx = null; }
+  }
+}
+
+// ============================================================
+//  UI Controller
+// ============================================================
+const config = new EngineConfig();
+const audio = new EngineAudio(config);
+
+const startBtn          = document.getElementById('startBtn');
+const rpmSlider         = document.getElementById('rpmSlider');
+const rpmValue          = document.getElementById('rpmValue');
+const rpmDisplay        = document.getElementById('rpmDisplay');
+const rpmCard           = document.getElementById('rpmCard');
+const presetSelect      = document.getElementById('presetSelect');
+const cylinderSelect    = document.getElementById('cylinderSelect');
+const crankAnglesDiv    = document.getElementById('crankAngles');
+const firingViz         = document.getElementById('firingViz');
+const readout           = document.getElementById('readout');
+const stroke4Btn        = document.getElementById('stroke4');
+const stroke2Btn        = document.getElementById('stroke2');
+const redlineSlider     = document.getElementById('redlineSlider');
+const redlineValueSpan  = document.getElementById('redlineValue');
+const limiterSlider     = document.getElementById('limiterSlider');
+const limiterValueSpan  = document.getElementById('limiterValue');
+const trackRpm          = document.getElementById('trackRpm');
+const trackWarning      = document.getElementById('trackWarning');
+const trackLimiter      = document.getElementById('trackLimiter');
+const redlineIndicator  = document.getElementById('redlineIndicator');
+
+// ---------- Redline flicker ----------
+let redlineFlickerID = null;
+
+function startRedlineFlicker() {
+  if (redlineFlickerID) return;
+  let on = false;
+  redlineFlickerID = setInterval(() => {
+    if ((!config.isInRedline && !config.isAtLimiter) || !audio.running) { stopRedlineFlicker(); return; }
+    on = !on;
+    rpmCard.classList.toggle('redline-flash', on);
+  }, config.isAtLimiter ? (50 + Math.random() * 30) : (100 + Math.random() * 80));
+}
+
+function stopRedlineFlicker() {
+  if (redlineFlickerID) { clearInterval(redlineFlickerID); redlineFlickerID = null; }
+  rpmCard.classList.remove('redline-flash');
+}
+
+function updateRedlineState() {
+  rpmCard.classList.toggle('redline-warn', config.isInRedline && audio.running);
+  if (config.isAtLimiter && audio.running) {
+    startRedlineFlicker(); redlineIndicator.classList.add('visible');
+    redlineIndicator.textContent = 'REV LIMITER ACTIVE';
+  } else if (config.isInRedline && audio.running) {
+    startRedlineFlicker(); redlineIndicator.classList.add('visible');
+    redlineIndicator.textContent = 'REDLINE WARNING';
+  } else {
+    stopRedlineFlicker(); redlineIndicator.classList.remove('visible');
+    rpmCard.classList.remove('redline-warn');
+  }
+  updateDualSlider();
+}
+
+function updateDualSlider() {
+  const min = parseInt(rpmSlider.min), max = parseInt(rpmSlider.max), range = max - min;
+  const rpmPct = ((config.rpm - min) / range) * 100;
+  const redlinePct = ((config.redlineRpm - min) / range) * 100;
+  const limiterPct = ((config.limiterRpm - min) / range) * 100;
+  trackRpm.style.left = '0'; trackRpm.style.width = `${rpmPct}%`;
+  trackWarning.style.left = `${redlinePct}%`; trackWarning.style.width = `${Math.max(0, limiterPct - redlinePct)}%`;
+  trackLimiter.style.left = `${limiterPct}%`; trackLimiter.style.width = `${100 - limiterPct}%`;
+}
+
+const revLimiterEnabled = true;
+
+// ---------- Toggle switches (Pico native) ----------
+const engineBrakingToggle = document.getElementById('engineBrakingToggle');
+let engineBrakingEnabled = true;
+engineBrakingToggle.addEventListener('change', () => { engineBrakingEnabled = engineBrakingToggle.checked; });
+
+// Gear whine is always enabled (no toggle)
+
+// ---------- Auto Gear Shift ----------
+const gearToggle         = document.getElementById('gearToggle');
+const gearNumberDisplay  = document.getElementById('gearNumber');
+const gearShiftIndicator = document.getElementById('gearShiftIndicator');
+
+let autoGearShift = false;
+let currentGear = 0;
+let gearShiftCooldown = false;
+let gearAnimationID = null;
+
+const GEAR_UP_RATIOS = [0, 0.65, 0.72, 0.76, 0.80, 0.83, 0.86];
+const MAX_GEAR = 6;
+const DOWNSHIFT_RPM_FRACTION = 0.18;
+
+gearToggle.addEventListener('change', () => {
+  autoGearShift = gearToggle.checked;
+  if (autoGearShift) { currentGear = 1; gearNumberDisplay.textContent = '1'; }
+  else { currentGear = 0; gearNumberDisplay.textContent = 'N'; gearShiftIndicator.classList.remove('visible'); }
+});
+
+function setRPM(newRpm) {
+  const max = Math.min(parseInt(rpmSlider.max), config.limiterRpm);
+  newRpm = Math.max(parseInt(rpmSlider.min), Math.min(max, Math.round(newRpm)));
+  config.rpm = newRpm;
+  rpmSlider.value = newRpm; rpmValue.textContent = newRpm; rpmDisplay.textContent = newRpm;
+  updateRedlineState(); updateReadout();
+}
+
+function performGearShift(direction) {
+  if (gearShiftCooldown) return;
+  const prevGear = currentGear;
+  if (direction === 'up' && currentGear < MAX_GEAR) currentGear++;
+  else if (direction === 'down' && currentGear >= 1) currentGear--;
+  else return;
+
+  // Dropping to neutral — no RPM animation, just disengage
+  if (currentGear === 0) {
+    gearNumberDisplay.textContent = 'N';
+    gearNumberDisplay.classList.add('shifting');
+    gearShiftIndicator.textContent = `${prevGear} → N`;
+    gearShiftIndicator.classList.add('visible');
+    setTimeout(() => {
+      gearNumberDisplay.classList.remove('shifting');
+      gearShiftIndicator.classList.remove('visible');
+    }, 400);
+    return;
+  }
+
+  gearShiftCooldown = true;
+  gearNumberDisplay.textContent = currentGear;
+  gearNumberDisplay.classList.add('shifting');
+  gearShiftIndicator.textContent = `${prevGear} → ${currentGear}`;
+  gearShiftIndicator.classList.add('visible');
+
+  const startRpm = config.rpm;
+  let targetRpm;
+  if (direction === 'up') targetRpm = Math.round(startRpm * GEAR_UP_RATIOS[currentGear]);
+  else {
+    const ratio = GEAR_UP_RATIOS[prevGear];
+    targetRpm = Math.round(Math.min(config.limiterRpm * 0.95, startRpm / ratio));
+  }
+
+  const hangDuration = direction === 'up' ? 60 : 30;
+  const sweepDuration = direction === 'up' ? 250 : 180;
+  const settleDuration = 80;
+  const overshootAmount = direction === 'up' ? -0.03 : 0.04;
+  const totalDuration = hangDuration + sweepDuration + settleDuration;
+  const animStart = performance.now();
+  const rpmDiff = targetRpm - startRpm;
+
+  function animateShift(now) {
+    const elapsed = now - animStart;
+    let currentRpm;
+    if (elapsed < hangDuration) {
+      currentRpm = startRpm + rpmDiff * 0.05 * (elapsed / hangDuration);
+    } else if (elapsed < hangDuration + sweepDuration) {
+      const p = (elapsed - hangDuration) / sweepDuration;
+      const eased = p < 0.5 ? 2*p*p : 1 - Math.pow(-2*p+2,2)/2;
+      const sweepTarget = 1.0 + overshootAmount;
+      currentRpm = startRpm + rpmDiff * (0.05 + eased * (sweepTarget - 0.05));
+    } else if (elapsed < totalDuration) {
+      const p = (elapsed - hangDuration - sweepDuration) / settleDuration;
+      const overshootRpm = startRpm + rpmDiff * (1.0 + overshootAmount);
+      currentRpm = overshootRpm + (targetRpm - overshootRpm) * p;
+    } else { currentRpm = targetRpm; }
+
+    setRPM(Math.round(currentRpm));
+    if (elapsed < totalDuration) gearAnimationID = requestAnimationFrame(animateShift);
+    else setTimeout(() => { gearNumberDisplay.classList.remove('shifting'); gearShiftIndicator.classList.remove('visible'); gearShiftCooldown = false; }, 250);
+  }
+  gearAnimationID = requestAnimationFrame(animateShift);
+}
+
+let autoShiftTimer = null;
+let isThrottleActive = false; // true ONLY while right arrow is held
+
+function checkAutoGearShift() {
+  if (!autoGearShift || !audio.running || gearShiftCooldown) return;
+  const rpm = config.rpm, redline = config.redlineRpm;
+
+  // UPSHIFT: only when throttle is actively held (right arrow down).
+  // During decay (throttle released), we NEVER auto-upshift —
+  // that would cause the sudden RPM drop glitch.
+  if (isThrottleActive && rpm >= redline && currentGear < MAX_GEAR) {
+    if (!autoShiftTimer) {
+      const delay = 350 + Math.random() * 200; // 350-550ms reaction
+      autoShiftTimer = setTimeout(() => {
+        autoShiftTimer = null;
+        // Re-check conditions: throttle must still be held
+        if (isThrottleActive && autoGearShift && audio.running && !gearShiftCooldown && currentGear < MAX_GEAR) {
+          performGearShift('up');
+        }
+      }, delay);
+    }
+  }
+
+  // Cancel pending upshift if throttle released or RPM dropped below redline
+  if (autoShiftTimer && (!isThrottleActive || rpm < redline)) {
+    clearTimeout(autoShiftTimer);
+    autoShiftTimer = null;
+  }
+
+  // DOWNSHIFT: always allowed (engine braking through gears).
+  // Only fires when well below redline threshold — no conflict with upshift.
+  if (rpm <= redline * DOWNSHIFT_RPM_FRACTION && currentGear > 1) {
+    performGearShift('down');
+  }
+}
+
+// ---------- Keyboard ----------
+const keysHeld = {};
+let keyLoopID = null;
+let throttleHoldStart = 0;
+
+function getRpmDelta(accelerating) {
+  const rpm = config.rpm;
+  const limiter = config.limiterRpm;
+  const rpmNorm = rpm / limiter;
+  // Neutral = no gear engaged, regardless of auto shift toggle.
+  // If user manually shifted to gear 1+ via arrow keys, they're in gear.
+  const isNeutral = currentGear === 0;
+
+  if (isNeutral) {
+    const holdTime = (performance.now() - throttleHoldStart) / 1000;
+    const throttleRamp = Math.min(1.0, holdTime / 0.06);
+    if (accelerating) {
+      const rpmCurve = rpmNorm < 0.9 ? 1.0 : (1.0 - (rpmNorm - 0.9) * 5);
+      return 280 * Math.max(0.35, rpmCurve) * throttleRamp;
+    }
+    return 0;
+  }
+
+  const gear = Math.max(1, currentGear);
+  const gearFactor = 1.0 / (0.5 + gear * 0.25);
+  const holdTime = (performance.now() - throttleHoldStart) / 1000;
+  const throttleRamp = Math.min(1.0, holdTime / 0.8);
+
+  if (accelerating) {
+    let rpmCurve;
+    if (rpmNorm < 0.15) rpmCurve = 0.3 + rpmNorm * 3;
+    else if (rpmNorm < 0.7) rpmCurve = 0.75 + 0.25 * Math.sin((rpmNorm - 0.15) / 0.55 * Math.PI);
+    else { rpmCurve = 1.0 - (rpmNorm - 0.7) * 2.5; rpmCurve = Math.max(0.15, rpmCurve); }
+    return 50 * rpmCurve * gearFactor * throttleRamp;
+  }
+  return 0;
+}
+
+function startKeyLoop() {
+  if (keyLoopID) return;
+  keyLoopID = setInterval(() => {
+    if (!audio.running) return;
+    if (keysHeld['ArrowRight']) { setRPM(config.rpm + getRpmDelta(true)); checkAutoGearShift(); }
+  }, 30);
+}
+
+function stopKeyLoop() { if (keyLoopID) { clearInterval(keyLoopID); keyLoopID = null; } }
+
+document.addEventListener('keydown', (e) => {
+  if (!audio.running) return;
+  if (e.key === 'ArrowRight') {
+    e.preventDefault(); stopRpmDecay();
+    isThrottleActive = true;
+    if (!keysHeld[e.key]) { keysHeld[e.key] = true; throttleHoldStart = performance.now(); startKeyLoop(); }
+  } else if (e.key === 'ArrowUp' && !e.repeat) {
+    e.preventDefault();
+    if (currentGear === 0) { currentGear = 1; gearNumberDisplay.textContent = '1'; return; }
+    performGearShift('up');
+  } else if (e.key === 'ArrowDown' && !e.repeat) {
+    e.preventDefault(); if (currentGear <= 0) return; performGearShift('down');
+  }
+});
+
+// ---------- RPM decay ----------
+let decayID = null;
+const IDLE_RPM = 1500;
+
+function startRpmDecay() {
+  stopRpmDecay();
+  let lastTime = performance.now();
+  function decayTick(now) {
+    if (!audio.running || keysHeld['ArrowRight']) { stopRpmDecay(); return; }
+    const dt = (now - lastTime) / 1000; lastTime = now;
+    const rpm = config.rpm;
+    if (rpm <= IDLE_RPM) { setRPM(IDLE_RPM); stopRpmDecay(); return; }
+    const rpmAboveIdle = rpm - IDLE_RPM;
+    const limiter = config.limiterRpm;
+    const rpmNorm = rpmAboveIdle / (limiter - IDLE_RPM);
+    const isNeutral = currentGear === 0;
+    let decayRate;
+    if (isNeutral) { decayRate = 5500 * (0.35 + rpmNorm * 0.65); }
+    else {
+      // Lower gear = much faster decay (shorter ratio = more engine braking)
+      // g1=2.5, g2=1.67, g3=1.25, g4=1.0, g5=0.83, g6=0.71
+      const gear = Math.max(1, currentGear);
+      const gearBraking = 3.5 / gear;
+      decayRate = 1400 * gearBraking * (0.15 + rpmNorm * rpmNorm * 0.85);
+    }
+    setRPM(Math.max(IDLE_RPM, rpm - decayRate * dt));
+    checkAutoGearShift();
+    decayID = requestAnimationFrame(decayTick);
+  }
+  decayID = requestAnimationFrame(decayTick);
+}
+
+function stopRpmDecay() { if (decayID) { cancelAnimationFrame(decayID); decayID = null; } }
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'ArrowRight') {
+    delete keysHeld[e.key]; stopKeyLoop();
+    isThrottleActive = false;
+    // Cancel any pending auto-upshift since throttle is released
+    if (autoShiftTimer) { clearTimeout(autoShiftTimer); autoShiftTimer = null; }
+    if (engineBrakingEnabled && audio.running && config.rpm > IDLE_RPM) startRpmDecay();
+  }
+});
+
+// ---------- Start / Stop ----------
+startBtn.addEventListener('click', () => {
+  if (audio.running) {
+    audio.stop();
+    startBtn.textContent = 'Start Engine'; startBtn.classList.remove('secondary');
+    stopRedlineFlicker(); stopRpmDecay(); redlineIndicator.classList.remove('visible');
+    if (autoShiftTimer) { clearTimeout(autoShiftTimer); autoShiftTimer = null; }
+    isThrottleActive = false;
+    if (autoGearShift) { currentGear = 1; gearNumberDisplay.textContent = '1'; }
+    else { currentGear = 0; gearNumberDisplay.textContent = 'N'; }
+    gearShiftIndicator.classList.remove('visible'); gearShiftCooldown = false;
+    if (gearAnimationID) cancelAnimationFrame(gearAnimationID);
+  } else {
+    audio.start();
+    startBtn.textContent = 'Stop Engine'; startBtn.classList.add('secondary');
+    if (autoGearShift) { currentGear = 1; gearNumberDisplay.textContent = '1'; }
+    updateRedlineState();
+  }
+});
+
+// ---------- Sliders ----------
+redlineSlider.addEventListener('input', () => {
+  let v = parseInt(redlineSlider.value);
+  if (v > config.limiterRpm) { v = config.limiterRpm; redlineSlider.value = v; }
+  config.redlineRpm = v; redlineValueSpan.textContent = v;
+  updateRedlineState(); updateReadout();
+});
+
+limiterSlider.addEventListener('input', () => {
+  let v = parseInt(limiterSlider.value);
+  if (v < config.redlineRpm) { v = config.redlineRpm; limiterSlider.value = v; }
+  config.limiterRpm = v; limiterValueSpan.textContent = v;
+  if (config.rpm > v) setRPM(v);
+  updateRedlineState(); updateReadout();
+});
+
+// ---------- Engine config ----------
+presetSelect.addEventListener('change', () => {
+  const key = presetSelect.value;
+  if (key === 'custom') return;
+  const p = PRESETS[key];
+  config.cylinders = p.cylinders; config.crankAngles = [...p.angles]; config.strokeType = p.stroke;
+  cylinderSelect.value = p.cylinders;
+  updateStrokeButtons(); renderCrankInputs(); updateFiringViz(); updateReadout();
+});
+
+cylinderSelect.addEventListener('change', () => {
+  const n = parseInt(cylinderSelect.value);
+  config.cylinders = n;
+  config.crankAngles = Array.from({ length: n }, (_, i) => Math.round((i * config.cycleDegrees) / n));
+  presetSelect.value = 'custom';
+  renderCrankInputs(); updateFiringViz(); updateReadout();
+});
+
+function updateStrokeButtons() {
+  stroke4Btn.classList.toggle('active', config.strokeType === 4);
+  stroke2Btn.classList.toggle('active', config.strokeType === 2);
+  const labels = firingViz.querySelector('.deg-labels');
+  if (config.strokeType === 2) labels.innerHTML = '<span>0°</span><span>90°</span><span>180°</span><span>270°</span><span>360°</span>';
+  else labels.innerHTML = '<span>0°</span><span>180°</span><span>360°</span><span>540°</span><span>720°</span>';
+}
+
+[stroke4Btn, stroke2Btn].forEach(btn => {
+  btn.addEventListener('click', () => {
+    config.strokeType = parseInt(btn.dataset.stroke);
+    updateStrokeButtons(); presetSelect.value = 'custom';
+    config.crankAngles = config.crankAngles.map(a => a % config.cycleDegrees);
+    renderCrankInputs(); updateFiringViz(); updateReadout();
+  });
+});
+
+function renderCrankInputs() {
+  crankAnglesDiv.innerHTML = '';
+  for (let i = 0; i < config.cylinders; i++) {
+    const chip = document.createElement('div');
+    chip.className = 'crank-chip';
+    chip.style.borderColor = CYL_COLORS[i % CYL_COLORS.length];
+    const label = document.createElement('span');
+    label.className = 'cyl-label';
+    label.textContent = `C${i + 1}`;
+    label.style.color = CYL_COLORS[i % CYL_COLORS.length];
+    const input = document.createElement('input');
+    input.type = 'number'; input.min = 0; input.max = config.cycleDegrees - 1;
+    input.value = config.crankAngles[i] ?? 0;
+    input.addEventListener('input', () => {
+      config.crankAngles[i] = parseInt(input.value) || 0;
+      presetSelect.value = 'custom'; updateFiringViz(); updateReadout();
+    });
+    const deg = document.createElement('span');
+    deg.textContent = '°'; deg.style.color = 'var(--pico-muted-color)';
+    chip.append(label, input, deg);
+    crankAnglesDiv.appendChild(chip);
+  }
+}
+
+function updateFiringViz() {
+  firingViz.querySelectorAll('.firing-dot').forEach(d => d.remove());
+  const schedule = config.getFiringSchedule();
+  const barLeft = 16;
+  const vizWidth = firingViz.clientWidth - barLeft * 2;
+  schedule.forEach(entry => {
+    const dot = document.createElement('div');
+    dot.className = 'firing-dot';
+    dot.style.background = CYL_COLORS[entry.cylinder % CYL_COLORS.length];
+    dot.style.left = `${barLeft + (entry.angleDeg / config.cycleDegrees) * vizWidth}px`;
+    dot.style.top = '36px';
+    dot.textContent = entry.cylinder + 1;
+    firingViz.appendChild(dot);
+  });
+}
+
+function updateReadout() {
+  const intervals = config.getFiringIntervals();
+  const schedule = config.getFiringSchedule();
+  const cycleDur = config.cycleDuration;
+  const firesPerSec = schedule.length / cycleDur;
+  readout.innerHTML = `
+    <div class="readout-cell"><div class="r-label">Cycle</div><div class="r-val">${(cycleDur*1000).toFixed(1)} ms</div></div>
+    <div class="readout-cell"><div class="r-label">Fires/sec</div><div class="r-val">${firesPerSec.toFixed(1)}</div></div>
+    <div class="readout-cell"><div class="r-label">Intervals</div><div class="r-val" style="font-size:0.75rem">${intervals.map(v=>v.toFixed(1)+'ms').join(', ')}</div></div>
+    <div class="readout-cell"><div class="r-label">Firing Order</div><div class="r-val" style="font-size:0.85rem">${schedule.map(s=>s.cylinder+1).join(' → ')}</div></div>
+  `;
+}
+
+// ---------- Piston & Crank Animation ----------
+const pistonCanvas = document.getElementById('pistonCanvas');
+const pCtx = pistonCanvas.getContext('2d');
+let crankAngle = 0;
+let lastAnimTime = null;
+let animFrameID = null;
+
+function resizePistonCanvas() {
+  const rect = pistonCanvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  pistonCanvas.width = rect.width * dpr;
+  pistonCanvas.height = 220 * dpr;
+  pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function drawPiston(timestamp) {
+  // Smooth dt: skip first frame, clamp to 50ms max to avoid jumps
+  if (lastAnimTime === null) { lastAnimTime = timestamp; animFrameID = requestAnimationFrame(drawPiston); return; }
+  const rawDt = (timestamp - lastAnimTime) / 1000;
+  const dt = Math.min(rawDt, 0.05); // cap at 50ms (20fps minimum)
+  lastAnimTime = timestamp;
+
+  // Advance crank angle based on RPM
+  const rps = config.rpm / 60;
+  crankAngle += rps * 2 * Math.PI * dt;
+  if (crankAngle > 1e6) crankAngle -= 1e6; // prevent float overflow
+
+  const w = pistonCanvas.width / (window.devicePixelRatio || 1);
+  const h = pistonCanvas.height / (window.devicePixelRatio || 1);
+  pCtx.clearRect(0, 0, w, h);
+
+  const numCyl = config.cylinders;
+  const spacing = w / (numCyl + 1);
+  const cycleDeg = config.cycleDegrees;
+
+  // Dimensions (scale to available space)
+  const crankR = Math.min(22, spacing * 0.18);     // crank radius
+  const rodLen = crankR * 3.2;                      // connecting rod length
+  const pistonW = crankR * 2.2;                     // piston width
+  const pistonH = crankR * 1.2;                     // piston height
+  const cylW = pistonW + 6;                         // cylinder bore width
+  const cylH = rodLen + crankR + pistonH + 10;      // cylinder bore height
+
+  const crankCenterY = h - 35;                      // crank center near bottom
+  const cylTopY = crankCenterY - rodLen - crankR - pistonH - 8;
+
+  for (let i = 0; i < numCyl; i++) {
+    const cx = spacing * (i + 1);
+    const color = CYL_COLORS[i % CYL_COLORS.length];
+
+    // Each cylinder's crank offset
+    const offsetDeg = config.crankAngles[i] || 0;
+    const offsetRad = (offsetDeg / 360) * 2 * Math.PI;
+    const angle = crankAngle + offsetRad;
+
+    // Crank pin position
+    const crankPinX = cx + Math.sin(angle) * crankR;
+    const crankPinY = crankCenterY - Math.cos(angle) * crankR;
+
+    // Piston position (slider-crank mechanism)
+    const dx = crankPinX - cx;
+    const pistonY = crankPinY - Math.sqrt(Math.max(0, rodLen * rodLen - dx * dx));
+
+    // --- Detect firing (simplified: fires near TDC, angle ≈ 0° within cycle) ---
+    const angleDeg = ((angle * 180 / Math.PI) % 360 + 360) % 360;
+    const isFiring = angleDeg < 15 || angleDeg > 345;
+
+    // --- Draw cylinder bore ---
+    pCtx.strokeStyle = '#333';
+    pCtx.lineWidth = 2;
+    // Left wall
+    pCtx.beginPath();
+    pCtx.moveTo(cx - cylW/2, cylTopY);
+    pCtx.lineTo(cx - cylW/2, crankCenterY + 5);
+    pCtx.stroke();
+    // Right wall
+    pCtx.beginPath();
+    pCtx.moveTo(cx + cylW/2, cylTopY);
+    pCtx.lineTo(cx + cylW/2, crankCenterY + 5);
+    pCtx.stroke();
+    // Cylinder head (top)
+    pCtx.beginPath();
+    pCtx.moveTo(cx - cylW/2, cylTopY);
+    pCtx.lineTo(cx + cylW/2, cylTopY);
+    pCtx.stroke();
+
+    // --- Combustion flash ---
+    if (isFiring) {
+      pCtx.fillStyle = `rgba(255, 120, 0, ${0.3 + Math.random() * 0.3})`;
+      pCtx.fillRect(cx - cylW/2 + 2, cylTopY + 1, cylW - 4, pistonY - cylTopY - pistonH/2);
+    }
+
+    // --- Draw piston ---
+    const pY = pistonY - pistonH / 2;
+    pCtx.fillStyle = isFiring ? '#ff6b35' : '#667';
+    pCtx.strokeStyle = '#999';
+    pCtx.lineWidth = 1.5;
+    pCtx.beginPath();
+    pCtx.roundRect(cx - pistonW/2, pY, pistonW, pistonH, 3);
+    pCtx.fill();
+    pCtx.stroke();
+
+    // --- Draw connecting rod ---
+    pCtx.strokeStyle = '#888';
+    pCtx.lineWidth = 3;
+    pCtx.lineCap = 'round';
+    pCtx.beginPath();
+    pCtx.moveTo(cx, pistonY);
+    pCtx.lineTo(crankPinX, crankPinY);
+    pCtx.stroke();
+
+    // --- Draw crankshaft circle ---
+    pCtx.strokeStyle = '#555';
+    pCtx.lineWidth = 2;
+    pCtx.beginPath();
+    pCtx.arc(cx, crankCenterY, crankR, 0, 2 * Math.PI);
+    pCtx.stroke();
+
+    // --- Draw crank arm ---
+    pCtx.strokeStyle = '#777';
+    pCtx.lineWidth = 4;
+    pCtx.beginPath();
+    pCtx.moveTo(cx, crankCenterY);
+    pCtx.lineTo(crankPinX, crankPinY);
+    pCtx.stroke();
+
+    // --- Crank pin dot ---
+    pCtx.fillStyle = color;
+    pCtx.beginPath();
+    pCtx.arc(crankPinX, crankPinY, 3.5, 0, 2 * Math.PI);
+    pCtx.fill();
+
+    // --- Wrist pin dot ---
+    pCtx.fillStyle = '#aaa';
+    pCtx.beginPath();
+    pCtx.arc(cx, pistonY, 2.5, 0, 2 * Math.PI);
+    pCtx.fill();
+
+    // --- Cylinder label ---
+    pCtx.fillStyle = color;
+    pCtx.font = '10px system-ui, sans-serif';
+    pCtx.textAlign = 'center';
+    pCtx.fillText(`C${i + 1}`, cx, h - 8);
+  }
+
+  animFrameID = requestAnimationFrame(drawPiston);
+}
+
+function startPistonAnimation() {
+  if (animFrameID) return;
+  lastAnimTime = null; // null triggers the "skip first frame" logic
+  resizePistonCanvas();
+  animFrameID = requestAnimationFrame(drawPiston);
+}
+
+function stopPistonAnimation() {
+  if (animFrameID) { cancelAnimationFrame(animFrameID); animFrameID = null; }
+}
+
+// Start animation immediately (runs at idle even before engine starts)
+resizePistonCanvas();
+startPistonAnimation();
+window.addEventListener('resize', resizePistonCanvas);
+
+// ---------- Virtual Joypad (mobile) ----------
+// Show joypad on touch-capable devices
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+  document.body.classList.add('vpad-active');
+
+  const vpadThrottle = document.getElementById('vpadThrottle');
+  const vpadUp = document.getElementById('vpadUp');
+  const vpadDown = document.getElementById('vpadDown');
+
+  // Throttle: hold to rev (mirrors ArrowRight keydown/keyup)
+  vpadThrottle.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!audio.running) return;
+    vpadThrottle.classList.add('active');
+    stopRpmDecay();
+    isThrottleActive = true;
+    if (!keysHeld['ArrowRight']) {
+      keysHeld['ArrowRight'] = true;
+      throttleHoldStart = performance.now();
+      startKeyLoop();
+    }
+  }, { passive: false });
+
+  vpadThrottle.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    vpadThrottle.classList.remove('active');
+    delete keysHeld['ArrowRight'];
+    stopKeyLoop();
+    isThrottleActive = false;
+    if (autoShiftTimer) { clearTimeout(autoShiftTimer); autoShiftTimer = null; }
+    if (engineBrakingEnabled && audio.running && config.rpm > IDLE_RPM) startRpmDecay();
+  }, { passive: false });
+
+  vpadThrottle.addEventListener('touchcancel', (e) => {
+    vpadThrottle.classList.remove('active');
+    delete keysHeld['ArrowRight'];
+    stopKeyLoop();
+    isThrottleActive = false;
+    if (autoShiftTimer) { clearTimeout(autoShiftTimer); autoShiftTimer = null; }
+    if (engineBrakingEnabled && audio.running && config.rpm > IDLE_RPM) startRpmDecay();
+  });
+
+  // Gear Up
+  vpadUp.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!audio.running) return;
+    vpadUp.classList.add('active');
+    if (currentGear === 0) {
+      currentGear = 1;
+      gearNumberDisplay.textContent = '1';
+    } else {
+      performGearShift('up');
+    }
+  }, { passive: false });
+
+  vpadUp.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    vpadUp.classList.remove('active');
+  }, { passive: false });
+
+  // Gear Down
+  vpadDown.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!audio.running || currentGear <= 0) return;
+    vpadDown.classList.add('active');
+    performGearShift('down');
+  }, { passive: false });
+
+  vpadDown.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    vpadDown.classList.remove('active');
+  }, { passive: false });
+}
+
+// ---------- Init ----------
+function init() {
+  const defaultPreset = 'single';
+  presetSelect.value = defaultPreset;
+  const p = PRESETS[defaultPreset];
+  config.cylinders = p.cylinders; config.crankAngles = [...p.angles]; config.strokeType = p.stroke;
+  config.rpm = IDLE_RPM; cylinderSelect.value = p.cylinders;
+  rpmSlider.value = IDLE_RPM; rpmValue.textContent = IDLE_RPM; rpmDisplay.textContent = IDLE_RPM;
+  updateStrokeButtons(); renderCrankInputs(); updateFiringViz(); updateReadout(); updateDualSlider();
+}
+
+window.addEventListener('resize', () => { updateFiringViz(); updateDualSlider(); });
+init();
+</script>
+</body>
+</html>
