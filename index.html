@@ -17,260 +17,252 @@
 
     body { padding: 1rem 0; }
 
-    /* ===== RPM display ===== */
-    .rpm-display { text-align: center; margin-bottom: 0.5rem; }
+    /* ===== Instrument Cluster ===== */
+    .cluster {
+      background: #0a0a0f;
+      border: 2px solid #1a1a2e;
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      transition: background 0.05s, border-color 0.05s, box-shadow 0.05s;
+    }
+
+    .rpm-card.redline-flash {
+      background: #2a0808 !important;
+      border-color: #e94560 !important;
+      box-shadow: 0 0 40px rgba(233,69,96,0.3);
+    }
+    .rpm-card.redline-warn { border-color: #ff9800 !important; }
+
+    /* Full-screen red flash */
+    body.screen-flash::after {
+      content: ''; position: fixed; inset: 0; z-index: 9999;
+      background: radial-gradient(ellipse at center, rgba(233,69,96,0.25), rgba(180,20,40,0.15));
+      pointer-events: none;
+    }
+
+    /* --- Shift lights row --- */
+    .shift-lights {
+      display: flex; justify-content: center; gap: 6px;
+      margin-bottom: 0.75rem;
+    }
+    .shift-light {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: #1a1a2e; border: 1px solid #222;
+      transition: background 0.05s, box-shadow 0.05s;
+    }
+    .shift-light.green { background: #00e676; box-shadow: 0 0 6px #00e676; }
+    .shift-light.amber { background: #ff9800; box-shadow: 0 0 6px #ff9800; }
+    .shift-light.red { background: #ff1744; box-shadow: 0 0 8px #ff1744; }
+
+    /* --- Tach bar --- */
+    .tach-bar-wrap { position: relative; height: 28px; margin-bottom: 0.15rem; }
+    .tach-bar-bg {
+      position: absolute; inset: 0;
+      background: #111; border-radius: 4px; overflow: hidden;
+    }
+    .tach-fill {
+      position: absolute; top: 0; bottom: 0; left: 0;
+      border-radius: 4px 0 0 4px;
+      background: linear-gradient(90deg, #00e676 0%, #00e676 50%, #ffeb3b 70%, #ff9800 85%, #ff1744 100%);
+      transition: width 0.04s linear;
+    }
+    .tach-redline-mark, .tach-limiter-mark {
+      position: absolute; top: 0; bottom: 0; width: 2px;
+    }
+    .tach-redline-mark { background: #ff9800; }
+    .tach-limiter-mark { background: #ff1744; }
+
+    .tach-labels {
+      display: flex; justify-content: space-between;
+      font-size: 0.55rem; color: #555; font-family: 'Courier New', monospace;
+      padding: 0 2px;
+    }
+
+    /* --- Main readout: RPM + Gear --- */
+    .main-readout {
+      display: flex; align-items: center; justify-content: center;
+      gap: 1.5rem; margin: 0.75rem 0 0.5rem;
+    }
 
     .rpm-number {
       font-family: 'Courier New', monospace;
-      font-size: 3.5rem;
-      font-weight: 700;
-      color: var(--pico-primary);
-      line-height: 1;
+      font-size: 3.8rem; font-weight: 700;
+      color: #00e676; line-height: 1;
+      letter-spacing: -2px;
+      transition: color 0.1s;
     }
-
-    .rpm-label {
-      font-size: 0.7rem;
-      color: var(--pico-muted-color);
-      text-transform: uppercase;
-      letter-spacing: 3px;
-    }
-
-    /* ===== Redline states ===== */
-    .rpm-card { transition: background 0.05s, border-color 0.05s, box-shadow 0.05s; }
-
-    .rpm-card.redline-flash {
-      background: #3a0a0a !important;
-      border-color: #e94560 !important;
-    }
+    .rpm-card.redline-warn .rpm-number { color: #ff9800; }
     .rpm-card.redline-flash .rpm-number { color: #ff1744 !important; }
-    .rpm-card.redline-warn .rpm-number { color: #ff5252; }
 
-    /* Full-screen red flash overlay */
-    body.screen-flash::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background: radial-gradient(ellipse at center, rgba(233,69,96,0.25), rgba(180,20,40,0.15));
-      pointer-events: none;
-      animation: redPulse 0.12s ease-in-out;
-    }
-
-    @keyframes redPulse {
-      0% { opacity: 0; }
-      50% { opacity: 1; }
-      100% { opacity: 0.6; }
-    }
-
-    .redline-indicator {
-      font-size: 0.75rem;
-      color: #e94560;
+    .rpm-unit {
+      font-size: 0.65rem; color: #555;
+      text-transform: uppercase; letter-spacing: 2px;
       text-align: center;
-      font-family: 'Courier New', monospace;
-      opacity: 0;
-      transition: opacity 0.2s;
-      margin: 0.25rem 0;
-    }
-    .redline-indicator.visible { opacity: 1; }
-
-    /* ===== Triple-range slider ===== */
-    .triple-slider {
-      position: relative;
-      height: 2.2rem;
     }
 
-    .triple-slider-track {
-      position: absolute;
-      top: 50%; left: 0; right: 0;
-      height: 6px;
-      transform: translateY(-50%);
-      border-radius: 3px;
-      background: var(--pico-secondary-background);
-      pointer-events: none;
-      overflow: hidden;
+    .gear-box {
+      display: flex; flex-direction: column; align-items: center;
+      background: #111; border: 1px solid #222; border-radius: 8px;
+      padding: 0.25rem 0.75rem; min-width: 50px;
     }
-
-    .triple-slider-track .fill {
-      position: absolute; top: 0; height: 100%; border-radius: 3px;
-    }
-    .fill-rpm { left: 0; background: var(--pico-primary); }
-    .fill-warn { background: linear-gradient(90deg, transparent, #ff9800); opacity: 0.5; }
-    .fill-lim { right: 0; background: linear-gradient(90deg, #e94560, #ff1744); opacity: 0.8; }
-
-    .triple-slider input[type="range"] {
-      position: absolute; top: 0; left: 0;
-      width: 100%; height: 100%;
-      margin: 0; background: transparent;
-      -webkit-appearance: none; appearance: none;
-      pointer-events: none; outline: none;
-    }
-
-    .triple-slider input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none; appearance: none;
-      width: 16px; height: 16px; border-radius: 50%;
-      cursor: pointer; pointer-events: all;
-      border: 2px solid;
-    }
-    .triple-slider input[type="range"]::-moz-range-thumb {
-      width: 16px; height: 16px; border-radius: 50%;
-      cursor: pointer; pointer-events: all; border: 2px solid;
-    }
-
-    /* RPM thumb hidden (indicator only) */
-    #rpmSlider { pointer-events: none !important; }
-    #rpmSlider::-webkit-slider-thumb { width:0;height:0;border:none;pointer-events:none; }
-    #rpmSlider::-moz-range-thumb { width:0;height:0;border:none;pointer-events:none; }
-
-    #redlineSlider::-webkit-slider-thumb { background:#ff9800; border-color:#cc7a00; }
-    #redlineSlider::-moz-range-thumb { background:#ff9800; border-color:#cc7a00; }
-    #limiterSlider::-webkit-slider-thumb { background:#e94560; border-color:#b8304a; }
-    #limiterSlider::-moz-range-thumb { background:#e94560; border-color:#b8304a; }
-
-    .triple-slider input::-webkit-slider-runnable-track { height:6px; background:transparent; }
-    .triple-slider input::-moz-range-track { height:6px; background:transparent; }
-
-    .slider-labels {
-      display: flex; justify-content: space-between;
-      font-size: 0.75rem; font-family: 'Courier New', monospace;
-      margin-top: 0.15rem;
-    }
-    .slider-labels .lbl-rpm { color: var(--pico-primary); }
-    .slider-labels .lbl-red { color: #ff9800; }
-    .slider-labels .lbl-lim { color: #e94560; }
-
-    /* ===== Toggles row ===== */
-    .toggle-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-    }
-    .toggle-item {
-      display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
-    }
-    .toggle-item small {
-      font-size: 0.7rem; color: var(--pico-muted-color);
-    }
-
-    /* ===== Gear display ===== */
-    .gear-bar {
-      display: flex; align-items: center; justify-content: center;
-      gap: 1rem; margin-top: 0.75rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid var(--pico-muted-border-color);
-    }
+    .gear-box-label { font-size: 0.5rem; color: #555; text-transform: uppercase; letter-spacing: 1px; }
     .gear-number {
       font-family: 'Courier New', monospace;
-      font-size: 2.2rem; font-weight: 700;
-      color: #00d2ff;
-      min-width: 2ch; text-align: center;
-      line-height: 1;
+      font-size: 2.4rem; font-weight: 700;
+      color: #00d2ff; line-height: 1;
+      min-width: 1.5ch; text-align: center;
       transition: color 0.15s, transform 0.15s;
     }
-    .gear-number.shifting { color: var(--pico-primary); transform: scale(1.3); }
+    .gear-number.shifting { color: var(--pico-primary); transform: scale(1.2); }
+
     .gear-shift-indicator {
-      font-size: 0.75rem; color: #00d2ff;
+      font-size: 0.65rem; color: #00d2ff;
       font-family: 'Courier New', monospace;
       opacity: 0; transition: opacity 0.15s;
-      text-align: center;
+      text-align: center; height: 1rem;
     }
     .gear-shift-indicator.visible { opacity: 1; }
 
-    /* ===== Keyboard hints ===== */
-    .kb-hints {
-      display: flex; justify-content: center; gap: 1rem;
-      flex-wrap: wrap; margin-top: 0.5rem;
+    /* --- Redline/limiter indicator --- */
+    .redline-indicator {
+      font-size: 0.7rem; color: #ff1744;
+      text-align: center; font-family: 'Courier New', monospace;
+      font-weight: 700; letter-spacing: 2px;
+      opacity: 0; transition: opacity 0.1s;
+      height: 1rem; margin-bottom: 0.25rem;
     }
-    .kb-hints span { font-size: 0.7rem; color: var(--pico-muted-color); }
+    .redline-indicator.visible { opacity: 1; }
+
+    /* --- Info strip --- */
+    .info-strip {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.65rem; font-family: 'Courier New', monospace;
+      color: #555; padding: 0.4rem 0;
+      border-top: 1px solid #1a1a2e;
+    }
+    .info-strip .val { color: var(--pico-primary); }
+
+    /* --- Slider row (redline/limiter) --- */
+    .slider-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.65rem; color: #555; font-family: 'Courier New', monospace;
+      margin-top: 0.4rem;
+    }
+    .slider-row input[type="range"] {
+      flex: 1; accent-color: #ff9800; height: 4px;
+    }
+    .slider-row .val-red { color: #ff9800; min-width: 3.5rem; text-align: right; }
+    .slider-row .val-lim { color: #e94560; min-width: 3.5rem; text-align: right; }
+    /* Hidden RPM slider for programmatic use */
+    #rpmSlider { display: none; }
+
+    /* --- Controls strip --- */
+    .controls-strip {
+      display: flex; justify-content: center; gap: 0.75rem;
+      margin-top: 0.6rem; padding-top: 0.5rem;
+      border-top: 1px solid #1a1a2e;
+    }
+    .ctrl-item {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-size: 0.65rem; color: #666;
+    }
+    .ctrl-item input[type="checkbox"] { margin: 0; }
+
+    /* --- Keyboard hints --- */
+    .kb-hints {
+      display: flex; justify-content: center; gap: 0.75rem;
+      margin-top: 0.5rem; flex-wrap: wrap;
+    }
+    .kb-hints span { font-size: 0.6rem; color: #444; }
+    .kb-hints kbd {
+      display: inline-block; padding: 0 4px;
+      font-size: 0.55rem; color: #888;
+      background: #111; border: 1px solid #222;
+      border-radius: 2px; margin: 0 1px;
+    }
+
+    /* ===== Collapsible panels ===== */
+    details { margin-bottom: 0; }
+    details summary {
+      font-size: 0.8rem; color: #888; cursor: pointer;
+      padding: 0.5rem 0; list-style: none;
+      border-top: 1px solid #1a1a2e;
+    }
+    details summary::before { content: '+ '; color: #555; }
+    details[open] summary::before { content: '- '; }
+    details .panel { padding: 0.75rem 0; }
 
     /* ===== Stroke toggle ===== */
     .stroke-group {
-      display: flex; border-radius: var(--pico-border-radius);
-      overflow: hidden; border: 1px solid var(--pico-muted-border-color);
+      display: flex; border-radius: 4px;
+      overflow: hidden; border: 1px solid #222;
     }
     .stroke-group button {
       flex: 1; margin: 0; border: none; border-radius: 0;
-      padding: 0.4rem 0.8rem; font-size: 0.85rem;
-      background: transparent; color: var(--pico-muted-color);
-      cursor: pointer; transition: all 0.15s;
+      padding: 0.3rem 0.6rem; font-size: 0.8rem;
+      background: transparent; color: #555; cursor: pointer;
     }
     .stroke-group button.active {
-      background: var(--pico-primary-background);
-      color: var(--pico-primary);
-      font-weight: 600;
+      background: #1a1a2e; color: var(--pico-primary); font-weight: 600;
     }
 
     /* ===== Crank angles ===== */
-    .crank-angles { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .crank-angles { display: flex; flex-wrap: wrap; gap: 0.4rem; }
     .crank-chip {
-      display: inline-flex; align-items: center; gap: 0.25rem;
-      padding: 0.2rem 0.5rem;
-      border: 1px solid var(--pico-muted-border-color);
-      border-radius: var(--pico-border-radius);
-      font-size: 0.85rem;
+      display: inline-flex; align-items: center; gap: 0.2rem;
+      padding: 0.15rem 0.4rem; border: 1px solid #222;
+      border-radius: 4px; font-size: 0.8rem;
     }
     .crank-chip input {
-      width: 3.5rem; padding: 0.15rem 0.25rem;
-      background: transparent; border: none;
-      color: var(--pico-primary);
+      width: 3rem; padding: 0.1rem; background: transparent;
+      border: none; color: var(--pico-primary);
       font-family: 'Courier New', monospace;
-      font-size: 0.85rem; text-align: center;
-      outline: none;
+      font-size: 0.8rem; text-align: center; outline: none;
     }
     .crank-chip .cyl-label { font-weight: 600; }
 
     /* ===== Firing pattern ===== */
     .firing-viz {
-      position: relative; height: 70px;
-      background: var(--pico-card-sectioning-background-color);
-      border-radius: var(--pico-border-radius);
-      overflow: hidden;
+      position: relative; height: 60px;
+      background: #0a0a0f; border-radius: 4px; overflow: hidden;
     }
     .firing-viz .bar {
-      position: absolute; top: 10px; left: 16px; right: 16px;
-      height: 4px; background: var(--pico-muted-border-color);
-      border-radius: 2px;
+      position: absolute; top: 8px; left: 12px; right: 12px;
+      height: 3px; background: #1a1a2e; border-radius: 2px;
     }
     .firing-viz .deg-labels {
-      position: absolute; top: 18px; left: 16px; right: 16px;
+      position: absolute; top: 15px; left: 12px; right: 12px;
       display: flex; justify-content: space-between;
-      font-size: 0.6rem; color: var(--pico-muted-color);
+      font-size: 0.5rem; color: #444;
     }
     .firing-dot {
-      position: absolute; width: 14px; height: 14px;
+      position: absolute; width: 12px; height: 12px;
       border-radius: 50%; transform: translateX(-50%);
       display: flex; align-items: center; justify-content: center;
-      font-size: 0.6rem; font-weight: 700; color: #fff;
+      font-size: 0.5rem; font-weight: 700; color: #fff;
       transition: left 0.3s ease;
     }
 
     /* ===== Readout grid ===== */
     .readout {
       display: grid; grid-template-columns: 1fr 1fr;
-      gap: 0.5rem; margin-top: 0.75rem;
+      gap: 0.4rem; margin-top: 0.5rem;
     }
     .readout-cell {
-      text-align: center; padding: 0.5rem;
-      background: var(--pico-card-sectioning-background-color);
-      border-radius: var(--pico-border-radius);
+      text-align: center; padding: 0.3rem;
+      background: #0a0a0f; border-radius: 4px;
     }
-    .readout-cell .r-label {
-      font-size: 0.65rem; color: var(--pico-muted-color);
-      text-transform: uppercase;
-    }
+    .readout-cell .r-label { font-size: 0.55rem; color: #444; text-transform: uppercase; }
     .readout-cell .r-val {
       font-family: 'Courier New', monospace;
-      font-size: 1rem; color: var(--pico-primary);
-      margin-top: 0.1rem;
+      font-size: 0.85rem; color: var(--pico-primary);
     }
 
     /* ===== Piston animation ===== */
     .piston-canvas {
-      width: 100%;
-      height: 220px;
-      display: block;
-      border-radius: var(--pico-border-radius);
-      background: var(--pico-card-sectioning-background-color);
+      width: 100%; height: 180px; display: block;
+      background: #0a0a0f; border-radius: 4px;
     }
 
     /* ===== Virtual Joypad (mobile only) ===== */
@@ -362,59 +354,119 @@
 </head>
 <body>
   <main class="container">
-    <hgroup style="text-align:center; margin-bottom:1.5rem;">
-      <h1>RevSynth</h1>
-      <p>Tweak engine parameters and hear the difference</p>
-    </hgroup>
+    <!-- ===== INSTRUMENT CLUSTER ===== -->
+    <div class="cluster rpm-card" id="rpmCard">
 
-    <!-- Piston & Crank Animation -->
-    <article>
-      <canvas class="piston-canvas" id="pistonCanvas"></canvas>
-    </article>
-
-    <!-- Start/Stop -->
-    <button id="startBtn" style="width:100%; margin-bottom:1rem;">Start Engine</button>
-
-    <!-- RPM & Controls -->
-    <article class="rpm-card" id="rpmCard">
-      <div class="rpm-display">
-        <div class="rpm-number" id="rpmDisplay">1500</div>
-        <div class="rpm-label">RPM</div>
+      <!-- Preset selector at top -->
+      <div style="margin-bottom:0.6rem;">
+        <select id="presetSelect" style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; background:#111; color:#ccc; border:1px solid #222; border-radius:4px;">
+          <optgroup label="Singles">
+            <option value="re350">Royal Enfield Classic 350</option>
+            <option value="ktm390">KTM 390 Duke</option>
+          </optgroup>
+          <optgroup label="V-Twins">
+            <option value="ducati959">Ducati 959 Panigale</option>
+            <option value="harley883">Harley Sportster 883</option>
+            <option value="motoGuzzi">Moto Guzzi V7</option>
+            <option value="indian">Indian Scout</option>
+          </optgroup>
+          <optgroup label="Parallel Twins">
+            <option value="mt07">Yamaha MT-07</option>
+            <option value="ninja650">Kawasaki Ninja 650</option>
+            <option value="re650">Royal Enfield INT 650</option>
+            <option value="aprilia660">Aprilia RS 660</option>
+          </optgroup>
+          <optgroup label="Triples">
+            <option value="triumph765" selected>Triumph Street Triple 765 RS</option>
+            <option value="mt09">Yamaha MT-09</option>
+          </optgroup>
+          <optgroup label="Inline Fours">
+            <option value="cbr600">Honda CBR600RR</option>
+            <option value="zx6r">Kawasaki ZX-6R</option>
+            <option value="r1">Yamaha YZF-R1 (Crossplane)</option>
+            <option value="s1000rr">BMW S1000RR</option>
+          </optgroup>
+          <optgroup label="V4">
+            <option value="panigaleV4">Ducati Panigale V4</option>
+          </optgroup>
+          <optgroup label="Flat / Boxer">
+            <option value="goldwing">Honda Gold Wing (Flat-6)</option>
+            <option value="r1250gs">BMW R1250GS (Boxer Twin)</option>
+          </optgroup>
+          <optgroup label="Custom">
+            <option value="custom">Custom</option>
+          </optgroup>
+        </select>
       </div>
 
-      <div class="triple-slider">
-        <div class="triple-slider-track">
-          <div class="fill fill-rpm" id="trackRpm"></div>
-          <div class="fill fill-warn" id="trackWarning"></div>
-          <div class="fill fill-lim" id="trackLimiter"></div>
+      <!-- Shift lights -->
+      <div class="shift-lights" id="shiftLights">
+        <div class="shift-light"></div><div class="shift-light"></div>
+        <div class="shift-light"></div><div class="shift-light"></div>
+        <div class="shift-light"></div><div class="shift-light"></div>
+        <div class="shift-light"></div><div class="shift-light"></div>
+        <div class="shift-light"></div><div class="shift-light"></div>
+      </div>
+
+      <!-- Tach bar -->
+      <div class="tach-bar-wrap">
+        <div class="tach-bar-bg">
+          <div class="tach-fill" id="tachFill"></div>
+          <div class="tach-redline-mark" id="tachRedlineMark"></div>
+          <div class="tach-limiter-mark" id="tachLimiterMark"></div>
         </div>
-        <input type="range" class="dual-range" id="rpmSlider" min="500" max="14000" value="1500" step="50">
-        <input type="range" class="dual-range" id="redlineSlider" min="500" max="14000" value="9000" step="100">
-        <input type="range" class="dual-range" id="limiterSlider" min="500" max="14000" value="11000" step="100">
       </div>
-      <div class="slider-labels">
-        <span class="lbl-rpm">RPM: <strong id="rpmValue">1500</strong></span>
-        <span class="lbl-red">Redline: <strong id="redlineValue">9000</strong></span>
-        <span class="lbl-lim">Limiter: <strong id="limiterValue">11000</strong></span>
+      <div class="tach-labels">
+        <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span><span>12</span><span>14</span>
+      </div>
+
+      <!-- RPM + Gear -->
+      <div class="main-readout">
+        <div>
+          <div class="rpm-number" id="rpmDisplay">1500</div>
+          <div class="rpm-unit">RPM</div>
+        </div>
+        <div class="gear-box">
+          <div class="gear-box-label">Gear</div>
+          <span class="gear-number" id="gearNumber">N</span>
+        </div>
       </div>
 
       <div class="redline-indicator" id="redlineIndicator">REV LIMITER ACTIVE</div>
+      <div class="gear-shift-indicator" id="gearShiftIndicator"></div>
 
-      <div class="toggle-grid" style="grid-template-columns: 1fr 1fr;">
-        <label class="toggle-item">
-          <small>Auto Decay</small>
-          <input type="checkbox" id="engineBrakingToggle" role="switch" checked>
-        </label>
-        <label class="toggle-item">
-          <small>Auto Shift</small>
-          <input type="checkbox" id="gearToggle" role="switch">
-        </label>
+      <!-- Hidden RPM slider (programmatic) -->
+      <input type="range" id="rpmSlider" min="500" max="14000" value="1500" step="50">
+
+      <!-- Redline / Limiter sliders -->
+      <div class="slider-row">
+        <span>REDLINE</span>
+        <input type="range" id="redlineSlider" min="500" max="14000" value="9000" step="100" style="accent-color:#ff9800;">
+        <span class="val-red" id="redlineValue">9000</span>
+      </div>
+      <div class="slider-row">
+        <span>LIMITER</span>
+        <input type="range" id="limiterSlider" min="500" max="14000" value="11000" step="100" style="accent-color:#e94560;">
+        <span class="val-lim" id="limiterValue">11000</span>
       </div>
 
-      <div class="gear-bar">
-        <small style="color:var(--pico-muted-color)">GEAR</small>
-        <span class="gear-number" id="gearNumber">N</span>
-        <span class="gear-shift-indicator" id="gearShiftIndicator"></span>
+      <!-- Info strip -->
+      <div class="info-strip">
+        <span>RPM: <span class="val" id="rpmValue">1500</span></span>
+        <span>Fires/s: <span class="val" id="infoFires">--</span></span>
+        <span>Cycle: <span class="val" id="infoCycle">--</span>ms</span>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls-strip">
+        <label class="ctrl-item">
+          <input type="checkbox" id="engineBrakingToggle" role="switch" checked>
+          <span>Auto Decay</span>
+        </label>
+        <label class="ctrl-item">
+          <input type="checkbox" id="gearToggle" role="switch">
+          <span>Auto Shift</span>
+        </label>
       </div>
 
       <div class="kb-hints">
@@ -422,63 +474,58 @@
         <span><kbd>&uarr;</kbd> Gear Up</span>
         <span><kbd>&darr;</kbd> Gear Down</span>
       </div>
-    </article>
+    </div>
+
+    <!-- Start/Stop -->
+    <button id="startBtn" style="width:100%; margin-bottom:1rem;">Start Engine</button>
+
+    <!-- ===== COLLAPSIBLE PANELS ===== -->
+
+    <!-- Piston Animation -->
+    <details open>
+      <summary>Piston Animation</summary>
+      <div class="panel">
+        <canvas class="piston-canvas" id="pistonCanvas"></canvas>
+      </div>
+    </details>
 
     <!-- Engine Configuration -->
-    <article>
-      <h2>Engine Configuration</h2>
-
-      <div class="grid-2">
-        <label for="presetSelect">Preset</label>
-        <select id="presetSelect">
-          <option value="single">Single Cylinder</option>
-          <option value="vtwin90">V-Twin 90° (Ducati)</option>
-          <option value="vtwin60">V-Twin 60° (Moto Guzzi)</option>
-          <option value="parallel270">Parallel Twin 270° (MT-07)</option>
-          <option value="parallel180">Parallel Twin 180°</option>
-          <option value="triple">Inline Triple (Triumph)</option>
-          <option value="inline4">Inline-4 Even Fire</option>
-          <option value="crossplane4">Crossplane I4 (R1)</option>
-          <option value="v4">V4 90° (Panigale)</option>
-          <option value="flat6">Flat-6 (Gold Wing)</option>
-          <option value="custom" selected>Custom</option>
-        </select>
-      </div>
-
-      <div class="grid-2" style="margin-top:0.75rem;">
-        <label for="cylinderSelect">Cylinders</label>
-        <select id="cylinderSelect">
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="6">6</option>
-        </select>
-      </div>
-
-      <div class="grid-2" style="margin-top:0.75rem;">
-        <label>Stroke Type</label>
-        <div class="stroke-group">
-          <button id="stroke4" class="active" data-stroke="4">4-Stroke</button>
-          <button id="stroke2" data-stroke="2">2-Stroke</button>
+    <details>
+      <summary>Engine Configuration</summary>
+      <div class="panel">
+        <div class="grid-2">
+          <label for="cylinderSelect">Cylinders</label>
+          <select id="cylinderSelect">
+            <option value="1">1</option><option value="2">2</option>
+            <option value="3">3</option><option value="4">4</option>
+            <option value="6">6</option>
+          </select>
         </div>
+        <div class="grid-2" style="margin-top:0.5rem;">
+          <label>Stroke</label>
+          <div class="stroke-group">
+            <button id="stroke4" class="active" data-stroke="4">4-Stroke</button>
+            <button id="stroke2" data-stroke="2">2-Stroke</button>
+          </div>
+        </div>
+        <label style="margin-top:0.5rem; display:block; font-size:0.8rem; color:#666;">Crank Angles</label>
+        <div class="crank-angles" id="crankAngles"></div>
       </div>
-
-      <label style="margin-top:0.75rem; display:block;">Crank Angles</label>
-      <div class="crank-angles" id="crankAngles"></div>
-    </article>
+    </details>
 
     <!-- Firing Pattern -->
-    <article>
-      <h2>Firing Pattern</h2>
-      <div class="firing-viz" id="firingViz">
-        <div class="bar"></div>
-        <div class="deg-labels">
-          <span>0°</span><span>180°</span><span>360°</span><span>540°</span><span>720°</span>
+    <details>
+      <summary>Firing Pattern</summary>
+      <div class="panel">
+        <div class="firing-viz" id="firingViz">
+          <div class="bar"></div>
+          <div class="deg-labels">
+            <span>0°</span><span>180°</span><span>360°</span><span>540°</span><span>720°</span>
+          </div>
         </div>
+        <div class="readout" id="readout"></div>
       </div>
-      <div class="readout" id="readout"></div>
-    </article>
+    </details>
   </main>
 
   <!-- Virtual Joypad (mobile) -->
@@ -504,17 +551,43 @@ const CYL_COLORS = ['#e94560', '#00d2ff', '#00e676', '#ffab00', '#d500f9', '#ff6
 // ============================================================
 //  Engine presets
 // ============================================================
+// Presets: real bikes with accurate crank angles, redline, and limiter RPM
 const PRESETS = {
-  single:       { angles: [0],                  cylinders: 1, stroke: 4 },
-  vtwin90:      { angles: [0, 90],              cylinders: 2, stroke: 4 },
-  vtwin60:      { angles: [0, 60],              cylinders: 2, stroke: 4 },
-  parallel270:  { angles: [0, 270],             cylinders: 2, stroke: 4 },
-  parallel180:  { angles: [0, 180],             cylinders: 2, stroke: 4 },
-  triple:       { angles: [0, 240, 480],        cylinders: 3, stroke: 4 },
-  inline4:      { angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4 },
-  crossplane4:  { angles: [0, 270, 180, 450],   cylinders: 4, stroke: 4 },
-  v4:           { angles: [0, 90, 360, 450],    cylinders: 4, stroke: 4 },
-  flat6:        { angles: [0, 120, 240, 360, 480, 600], cylinders: 6, stroke: 4 },
+  // --- Singles ---
+  re350:        { name: 'Royal Enfield Classic 350',    angles: [0],                  cylinders: 1, stroke: 4, redline: 5500,  limiter: 6800  },
+  ktm390:       { name: 'KTM 390 Duke',                angles: [0],                  cylinders: 1, stroke: 4, redline: 9500,  limiter: 10500 },
+
+  // --- V-Twins ---
+  ducati959:    { name: 'Ducati 959 Panigale',          angles: [0, 90],              cylinders: 2, stroke: 4, redline: 10500, limiter: 11500 },
+  harley883:    { name: 'Harley Sportster 883',         angles: [0, 45],              cylinders: 2, stroke: 4, redline: 5500,  limiter: 6200  },
+  motoGuzzi:    { name: 'Moto Guzzi V7',               angles: [0, 90],              cylinders: 2, stroke: 4, redline: 7000,  limiter: 7500  },
+  indian:       { name: 'Indian Scout',                 angles: [0, 60],              cylinders: 2, stroke: 4, redline: 8100,  limiter: 8600  },
+
+  // --- Parallel Twins ---
+  mt07:         { name: 'Yamaha MT-07',                 angles: [0, 270],             cylinders: 2, stroke: 4, redline: 9500,  limiter: 10500 },
+  ninja650:     { name: 'Kawasaki Ninja 650',           angles: [0, 180],             cylinders: 2, stroke: 4, redline: 10000, limiter: 10500 },
+  re650:        { name: 'Royal Enfield INT 650',        angles: [0, 270],             cylinders: 2, stroke: 4, redline: 7500,  limiter: 8250  },
+  aprilia660:   { name: 'Aprilia RS 660',               angles: [0, 270],             cylinders: 2, stroke: 4, redline: 10500, limiter: 11500 },
+
+  // --- Triples ---
+  triumph765:   { name: 'Triumph Street Triple 765 RS', angles: [0, 240, 480],        cylinders: 3, stroke: 4, redline: 12000, limiter: 12650 },
+  mt09:         { name: 'Yamaha MT-09',                 angles: [0, 240, 480],        cylinders: 3, stroke: 4, redline: 10500, limiter: 11500 },
+
+  // --- Inline Fours ---
+  cbr600:       { name: 'Honda CBR600RR',               angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, redline: 14000, limiter: 15000 },
+  zx6r:         { name: 'Kawasaki ZX-6R',               angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, redline: 14500, limiter: 15500 },
+  r1:           { name: 'Yamaha YZF-R1 (Crossplane)',   angles: [0, 270, 180, 450],   cylinders: 4, stroke: 4, redline: 13500, limiter: 14200 },
+  s1000rr:      { name: 'BMW S1000RR',                  angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, redline: 13500, limiter: 14200 },
+
+  // --- V4 ---
+  panigaleV4:   { name: 'Ducati Panigale V4',           angles: [0, 90, 360, 450],    cylinders: 4, stroke: 4, redline: 13500, limiter: 14500 },
+
+  // --- Flat / Boxer ---
+  goldwing:     { name: 'Honda Gold Wing (Flat-6)',      angles: [0, 120, 240, 360, 480, 600], cylinders: 6, stroke: 4, redline: 6000, limiter: 6800 },
+  r1250gs:      { name: 'BMW R1250GS (Boxer Twin)',     angles: [0, 360],             cylinders: 2, stroke: 4, redline: 7700,  limiter: 8500  },
+
+  // --- Custom ---
+  custom:       { name: 'Custom',                       angles: [0],                  cylinders: 1, stroke: 4, redline: 9000,  limiter: 11000 },
 };
 
 // ============================================================
@@ -873,10 +946,13 @@ const redlineSlider     = document.getElementById('redlineSlider');
 const redlineValueSpan  = document.getElementById('redlineValue');
 const limiterSlider     = document.getElementById('limiterSlider');
 const limiterValueSpan  = document.getElementById('limiterValue');
-const trackRpm          = document.getElementById('trackRpm');
-const trackWarning      = document.getElementById('trackWarning');
-const trackLimiter      = document.getElementById('trackLimiter');
+const tachFill          = document.getElementById('tachFill');
+const tachRedlineMark   = document.getElementById('tachRedlineMark');
+const tachLimiterMark   = document.getElementById('tachLimiterMark');
+const shiftLightEls     = document.querySelectorAll('.shift-light');
 const redlineIndicator  = document.getElementById('redlineIndicator');
+const infoFires         = document.getElementById('infoFires');
+const infoCycle         = document.getElementById('infoCycle');
 
 // ---------- Redline flicker ----------
 let redlineFlickerID = null;
@@ -918,9 +994,32 @@ function updateDualSlider() {
   const rpmPct = ((config.rpm - min) / range) * 100;
   const redlinePct = ((config.redlineRpm - min) / range) * 100;
   const limiterPct = ((config.limiterRpm - min) / range) * 100;
-  trackRpm.style.left = '0'; trackRpm.style.width = `${rpmPct}%`;
-  trackWarning.style.left = `${redlinePct}%`; trackWarning.style.width = `${Math.max(0, limiterPct - redlinePct)}%`;
-  trackLimiter.style.left = `${limiterPct}%`; trackLimiter.style.width = `${100 - limiterPct}%`;
+
+  // Tach bar fill
+  tachFill.style.width = `${rpmPct}%`;
+
+  // Redline & limiter markers
+  tachRedlineMark.style.left = `${redlinePct}%`;
+  tachLimiterMark.style.left = `${limiterPct}%`;
+
+  // Shift lights: 10 LEDs, light up based on RPM position toward redline
+  // Green (1-4), Amber (5-7), Red (8-10)
+  const rpmFraction = config.rpm / config.redlineRpm;
+  const litCount = Math.floor(Math.min(1, rpmFraction) * 10);
+  shiftLightEls.forEach((el, i) => {
+    el.classList.remove('green', 'amber', 'red');
+    if (i < litCount) {
+      if (i < 4) el.classList.add('green');
+      else if (i < 7) el.classList.add('amber');
+      else el.classList.add('red');
+    }
+  });
+
+  // Info strip
+  const schedule = config.getFiringSchedule();
+  const cycleDur = config.cycleDuration;
+  if (infoFires) infoFires.textContent = (schedule.length / cycleDur).toFixed(1);
+  if (infoCycle) infoCycle.textContent = (cycleDur * 1000).toFixed(1);
 }
 
 const revLimiterEnabled = true;
@@ -1211,9 +1310,24 @@ presetSelect.addEventListener('change', () => {
   const key = presetSelect.value;
   if (key === 'custom') return;
   const p = PRESETS[key];
-  config.cylinders = p.cylinders; config.crankAngles = [...p.angles]; config.strokeType = p.stroke;
+  config.cylinders = p.cylinders;
+  config.crankAngles = [...p.angles];
+  config.strokeType = p.stroke;
   cylinderSelect.value = p.cylinders;
-  updateStrokeButtons(); renderCrankInputs(); updateFiringViz(); updateReadout();
+
+  // Set redline and limiter from preset
+  config.redlineRpm = p.redline;
+  config.limiterRpm = p.limiter;
+  redlineSlider.value = p.redline;
+  limiterSlider.value = p.limiter;
+  redlineValueSpan.textContent = p.redline;
+  limiterValueSpan.textContent = p.limiter;
+
+  // Clamp RPM if above new limiter
+  if (config.rpm > p.limiter) setRPM(p.limiter);
+
+  updateStrokeButtons(); renderCrankInputs(); updateFiringViz();
+  updateRedlineState(); updateReadout();
 });
 
 cylinderSelect.addEventListener('change', () => {
@@ -1533,12 +1647,23 @@ if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
 
 // ---------- Init ----------
 function init() {
-  const defaultPreset = 'single';
+  const defaultPreset = 'triumph765';
   presetSelect.value = defaultPreset;
   const p = PRESETS[defaultPreset];
-  config.cylinders = p.cylinders; config.crankAngles = [...p.angles]; config.strokeType = p.stroke;
-  config.rpm = IDLE_RPM; cylinderSelect.value = p.cylinders;
-  rpmSlider.value = IDLE_RPM; rpmValue.textContent = IDLE_RPM; rpmDisplay.textContent = IDLE_RPM;
+  config.cylinders = p.cylinders;
+  config.crankAngles = [...p.angles];
+  config.strokeType = p.stroke;
+  config.redlineRpm = p.redline;
+  config.limiterRpm = p.limiter;
+  config.rpm = IDLE_RPM;
+  cylinderSelect.value = p.cylinders;
+  redlineSlider.value = p.redline;
+  limiterSlider.value = p.limiter;
+  redlineValueSpan.textContent = p.redline;
+  limiterValueSpan.textContent = p.limiter;
+  rpmSlider.value = IDLE_RPM;
+  rpmValue.textContent = IDLE_RPM;
+  rpmDisplay.textContent = IDLE_RPM;
   updateStrokeButtons(); renderCrankInputs(); updateFiringViz(); updateReadout(); updateDualSlider();
 }
 

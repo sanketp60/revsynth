@@ -1,0 +1,3 @@
+[     113ms] [LOG] TypeError: Failed to fetch
+    at https://dash.cloudflare.com/cf-c0700544b11110a6.js:3:124670
+    at async e (https://dash.cloudflare.com/cf-48d6691407e155d5.js:3:571819) @ https://dash.cloudflare.com/cf-9d9e1773fd9015a1.js:2
