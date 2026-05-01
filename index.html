@@ -428,7 +428,7 @@
         </div>
         <div class="gear-box">
           <div class="gear-box-label">Gear</div>
-          <span class="gear-number" id="gearNumber">N</span>
+          <span class="gear-number" id="gearNumber">1</span>
         </div>
       </div>
 
@@ -470,7 +470,7 @@
           <span>Auto Decay</span>
         </label>
         <label class="ctrl-item">
-          <input type="checkbox" id="gearToggle" role="switch">
+          <input type="checkbox" id="gearToggle" role="switch" checked>
           <span>Auto Shift</span>
         </label>
       </div>
@@ -832,6 +832,7 @@ class EngineAudio {
 
     this.whineGain.connect(this.whineBPF); this.whineBPF.connect(this.whinePeak); this.whinePeak.connect(this.masterGain);
     this.whineOsc1.start(); this.whineOsc2.start(); this.whineOsc3.start();
+
   }
 
   _startSource() {
@@ -1050,8 +1051,8 @@ const gearToggle         = document.getElementById('gearToggle');
 const gearNumberDisplay  = document.getElementById('gearNumber');
 const gearShiftIndicator = document.getElementById('gearShiftIndicator');
 
-let autoGearShift = false;
-let currentGear = 0;
+let autoGearShift = true;
+let currentGear = 1;
 let gearShiftCooldown = false;
 let gearAnimationID = null;
 
@@ -1148,13 +1149,13 @@ function checkAutoGearShift() {
   // UPSHIFT: only when throttle is actively held (right arrow down).
   // During decay (throttle released), we NEVER auto-upshift —
   // that would cause the sudden RPM drop glitch.
-  if (isThrottleActive && rpm >= redline && currentGear < MAX_GEAR) {
+  if (isThrottleActive && rpm >= redline && currentGear >= 1 && currentGear < MAX_GEAR) {
     if (!autoShiftTimer) {
       const delay = 350 + Math.random() * 200; // 350-550ms reaction
       autoShiftTimer = setTimeout(() => {
         autoShiftTimer = null;
         // Re-check conditions: throttle must still be held
-        if (isThrottleActive && autoGearShift && audio.running && !gearShiftCooldown && currentGear < MAX_GEAR) {
+        if (isThrottleActive && autoGearShift && audio.running && !gearShiftCooldown && currentGear >= 1 && currentGear < MAX_GEAR) {
           performGearShift('up');
         }
       }, delay);
