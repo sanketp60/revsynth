@@ -261,8 +261,9 @@
 
     /* ===== Piston animation ===== */
     .piston-canvas {
-      width: 100%; height: 180px; display: block;
+      width: 100%; display: block;
       background: #0a0a0f; border-radius: 4px;
+      /* height set dynamically by JS based on cylinder count */
     }
 
     /* ===== Virtual Joypad (mobile only) ===== */
@@ -375,6 +376,7 @@
             <option value="ninja650">Kawasaki Ninja 650</option>
             <option value="re650">Royal Enfield INT 650</option>
             <option value="aprilia660">Aprilia RS 660</option>
+            <option value="scrambler1200">Triumph Scrambler 1200 XE</option>
           </optgroup>
           <optgroup label="Triples">
             <option value="triumph765" selected>Triumph Street Triple 765 RS</option>
@@ -417,7 +419,7 @@
         </div>
       </div>
       <div class="tach-labels">
-        <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span><span>12</span><span>14</span>
+        <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span><span>12</span><span>14</span><span>17</span>
       </div>
 
       <!-- RPM + Gear -->
@@ -436,17 +438,17 @@
       <div class="gear-shift-indicator" id="gearShiftIndicator"></div>
 
       <!-- Hidden RPM slider (programmatic) -->
-      <input type="range" id="rpmSlider" min="500" max="14000" value="1500" step="50">
+      <input type="range" id="rpmSlider" min="500" max="17000" value="1500" step="50">
 
       <!-- Redline / Limiter sliders -->
       <div class="slider-row">
         <span>REDLINE</span>
-        <input type="range" id="redlineSlider" min="500" max="14000" value="9000" step="100" style="accent-color:#ff9800;">
+        <input type="range" id="redlineSlider" min="500" max="17000" value="9000" step="100" style="accent-color:#ff9800;">
         <span class="val-red" id="redlineValue">9000</span>
       </div>
       <div class="slider-row">
         <span>LIMITER</span>
-        <input type="range" id="limiterSlider" min="500" max="14000" value="11000" step="100" style="accent-color:#e94560;">
+        <input type="range" id="limiterSlider" min="500" max="17000" value="11000" step="100" style="accent-color:#e94560;">
         <span class="val-lim" id="limiterValue">11000</span>
       </div>
 
@@ -488,50 +490,90 @@
     <!-- ===== COLLAPSIBLE PANELS ===== -->
 
     <!-- Piston Animation -->
-    <details open>
-      <summary>Piston Animation</summary>
-      <div class="panel">
-        <canvas class="piston-canvas" id="pistonCanvas"></canvas>
-      </div>
-    </details>
+    <article>
+      <h2>Piston Animation</h2>
+      <canvas class="piston-canvas" id="pistonCanvas"></canvas>
+    </article>
 
     <!-- Engine Configuration -->
-    <details>
-      <summary>Engine Configuration</summary>
-      <div class="panel">
-        <div class="grid-2">
-          <label for="cylinderSelect">Cylinders</label>
-          <select id="cylinderSelect">
-            <option value="1">1</option><option value="2">2</option>
-            <option value="3">3</option><option value="4">4</option>
-            <option value="6">6</option>
-          </select>
-        </div>
-        <div class="grid-2" style="margin-top:0.5rem;">
-          <label>Stroke</label>
-          <div class="stroke-group">
-            <button id="stroke4" class="active" data-stroke="4">4-Stroke</button>
-            <button id="stroke2" data-stroke="2">2-Stroke</button>
-          </div>
-        </div>
-        <label style="margin-top:0.5rem; display:block; font-size:0.8rem; color:#666;">Crank Angles</label>
-        <div class="crank-angles" id="crankAngles"></div>
+    <article>
+      <h2>Engine Configuration</h2>
+      <div class="grid-2">
+        <label for="cylinderSelect">Cylinders</label>
+        <select id="cylinderSelect">
+          <option value="1">1</option><option value="2">2</option>
+          <option value="3">3</option><option value="4">4</option>
+          <option value="6">6</option>
+        </select>
       </div>
-    </details>
+      <div class="grid-2" style="margin-top:0.5rem;">
+        <label>Stroke</label>
+        <div class="stroke-group">
+          <button id="stroke4" class="active" data-stroke="4">4-Stroke</button>
+          <button id="stroke2" data-stroke="2">2-Stroke</button>
+        </div>
+      </div>
+      <label style="margin-top:0.5rem; display:block; font-size:0.8rem; color:#666;">Crank Angles</label>
+      <div class="crank-angles" id="crankAngles"></div>
+    </article>
+
+    <!-- Sound Tuning -->
+    <article>
+      <h2>Sound Tuning</h2>
+
+      <div class="grid-2">
+        <label>Exhaust Type</label>
+        <select id="exhaustType">
+          <option value="stock">Stock Muffler</option>
+          <option value="slipon" selected>Slip-On</option>
+          <option value="straight">Straight Pipe</option>
+        </select>
+      </div>
+
+      <div class="grid-2" style="margin-top:0.5rem;">
+        <label>Valves / Cyl</label>
+        <div class="stroke-group">
+          <button id="valves2" data-valves="2">2V</button>
+          <button id="valves4" class="active" data-valves="4">4V</button>
+        </div>
+      </div>
+
+      <div class="slider-row" style="margin-top:0.5rem;">
+        <span style="min-width:5rem;">Bass</span>
+        <input type="range" id="bassSlider" min="0" max="16" value="8" step="1" style="accent-color:#ff6b35;">
+        <span class="val" id="bassValue" style="min-width:2rem; text-align:right;">8</span>
+      </div>
+
+      <div class="slider-row">
+        <span style="min-width:5rem;">Whine</span>
+        <input type="range" id="whineSlider" min="0" max="100" value="50" step="5" style="accent-color:#ff6b35;">
+        <span class="val" id="whineValue" style="min-width:2rem; text-align:right;">50</span>
+      </div>
+
+      <div class="slider-row">
+        <span style="min-width:5rem;">Pipe Length</span>
+        <input type="range" id="pipeLenSlider" min="1" max="10" value="5" step="0.5" style="accent-color:#ff6b35;">
+        <span class="val" id="pipeLenValue" style="min-width:2rem; text-align:right;">5</span>
+      </div>
+
+      <div class="slider-row">
+        <span style="min-width:5rem;">Throttle</span>
+        <input type="range" id="throttleSensSlider" min="10" max="200" value="100" step="5" style="accent-color:#ff6b35;">
+        <span class="val" id="throttleSensValue" style="min-width:2rem; text-align:right;">100</span>
+      </div>
+    </article>
 
     <!-- Firing Pattern -->
-    <details>
-      <summary>Firing Pattern</summary>
-      <div class="panel">
-        <div class="firing-viz" id="firingViz">
-          <div class="bar"></div>
-          <div class="deg-labels">
-            <span>0°</span><span>180°</span><span>360°</span><span>540°</span><span>720°</span>
-          </div>
+    <article>
+      <h2>Firing Pattern</h2>
+      <div class="firing-viz" id="firingViz">
+        <div class="bar"></div>
+        <div class="deg-labels">
+          <span>0°</span><span>180°</span><span>360°</span><span>540°</span><span>720°</span>
         </div>
-        <div class="readout" id="readout"></div>
       </div>
-    </details>
+      <div class="readout" id="readout"></div>
+    </article>
   </main>
 
   <!-- Virtual Joypad (mobile) -->
@@ -579,6 +621,7 @@ const PRESETS = {
   ninja650:     { name: 'Kawasaki Ninja 650',           angles: [0, 180],             cylinders: 2, stroke: 4, idle: 1200, redline: 10000, limiter: 10500, revSpeed: 0.68 },
   re650:        { name: 'Royal Enfield INT 650',        angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1100, redline: 7500,  limiter: 8250,  revSpeed: 0.48 },
   aprilia660:   { name: 'Aprilia RS 660',               angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1300, redline: 10500, limiter: 11500, revSpeed: 0.82 },
+  scrambler1200:{ name: 'Triumph Scrambler 1200 XE',    angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1050, redline: 7000,  limiter: 7500,  revSpeed: 0.50 },
 
   // --- Triples ---
   triumph765:   { name: 'Triumph Street Triple 765 RS', angles: [0, 240, 480],        cylinders: 3, stroke: 4, idle: 1250, redline: 12000, limiter: 12650, revSpeed: 1.00 },
@@ -697,16 +740,19 @@ class EngineAudio {
         const t = j / sr;
         const envelope = Math.exp(-t * decayRate / (pulseSamples / sr));
         const phase = 2 * Math.PI * fundFreq * t;
-        const sub = 0.8 * Math.sin(0.5 * phase);
+        // 2V engines: stronger sub + fundamental, weaker upper harmonics (grunty)
+        // 4V engines: richer harmonic series (screamy at high RPM)
+        const is4v = typeof userValves !== 'undefined' ? userValves === 4 : true;
+        const sub = (is4v ? 0.8 : 1.1) * Math.sin(0.5 * phase);
         const h1 = 1.0 * Math.sin(phase);
-        const h2 = 0.7 * Math.sin(2.0 * phase);
-        const h3 = 0.4 * Math.sin(3.02 * phase + 0.4);
-        const h4 = 0.22 * Math.sin(4.05 * phase);
-        const h5 = 0.12 * Math.sin(5.1 * phase + 0.8);
-        const h6 = 0.07 * Math.sin(6.15 * phase);
+        const h2 = (is4v ? 0.7 : 0.55) * Math.sin(2.0 * phase);
+        const h3 = (is4v ? 0.4 : 0.2) * Math.sin(3.02 * phase + 0.4);
+        const h4 = (is4v ? 0.22 : 0.08) * Math.sin(4.05 * phase);
+        const h5 = (is4v ? 0.12 : 0.03) * Math.sin(5.1 * phase + 0.8);
+        const h6 = (is4v ? 0.07 : 0.01) * Math.sin(6.15 * phase);
         const pistonPhase = 2 * Math.PI * (j / pulseSamples);
-        const piston = 0.35 * Math.cos(2 * pistonPhase);
-        const noise = (Math.random() * 2 - 1) * 0.08;
+        const piston = (is4v ? 0.35 : 0.5) * Math.cos(2 * pistonPhase);
+        const noise = (Math.random() * 2 - 1) * (is4v ? 0.08 : 0.12);
         const sample = (sub + h1 + h2 + h3 + h4 + h5 + h6 + piston + noise) * envelope;
         data[writeIdx] += sample;
       }
@@ -860,8 +906,30 @@ class EngineAudio {
   _update() {
     if (!this.running || !this.ctx) return;
     const t = this.ctx.currentTime;
-    const rpm = this.config.rpm;
+    let rpm = this.config.rpm;
     const rpmNorm = rpm / 14000;
+
+    // Idle jitter: when near idle, add organic RPM wavering
+    // Real engines fluctuate ±20-40 RPM due to combustion variations
+    const idleRange = 200; // jitter active within this range above idle
+    if (rpm <= IDLE_RPM + idleRange) {
+      // Slow organic wobble using sin waves at different frequencies
+      const wobble1 = Math.sin(t * 1.7) * 15;   // slow primary
+      const wobble2 = Math.sin(t * 3.1) * 8;    // faster secondary
+      const wobble3 = (Math.random() - 0.5) * 10; // random noise
+      this._idleJitter = wobble1 + wobble2 + wobble3;
+      rpm = rpm + this._idleJitter;
+      // Update display with jittered RPM
+      const displayRpm = Math.round(rpm);
+      if (document.getElementById('rpmDisplay')) {
+        document.getElementById('rpmDisplay').textContent = displayRpm;
+      }
+      if (document.getElementById('rpmValue')) {
+        document.getElementById('rpmValue').textContent = displayRpm;
+      }
+    } else {
+      this._idleJitter = 0;
+    }
 
     if (this.source) {
       this.source.playbackRate.setTargetAtTime(rpm / this._baseRPM, t, 0.02);
@@ -908,7 +976,8 @@ class EngineAudio {
       this.whineOsc1.frequency.setTargetAtTime(f1, t, 0.03);
       this.whineOsc2.frequency.setTargetAtTime(f1 * 1.5, t, 0.03);
       this.whineOsc3.frequency.setTargetAtTime(f1 * 2, t, 0.03);
-      this.whineGain.gain.setTargetAtTime(0.005 + rpmNorm * rpmNorm * 0.12, t, 0.04);
+      const whineUser = this._whineUserGain !== undefined ? this._whineUserGain : 1.0;
+      this.whineGain.gain.setTargetAtTime((0.005 + rpmNorm * rpmNorm * 0.12) * whineUser, t, 0.04);
       this.whineBPF.frequency.setTargetAtTime(Math.max(500, Math.min(f1 * 1.5, 8000)), t, 0.04);
     } else {
       this.whineGain.gain.setTargetAtTime(0, t, 0.04);
@@ -1037,8 +1106,6 @@ function updateDualSlider() {
   if (infoCycle) infoCycle.textContent = (cycleDur * 1000).toFixed(1);
 }
 
-const revLimiterEnabled = true;
-
 // ---------- Toggle switches (Pico native) ----------
 const engineBrakingToggle = document.getElementById('engineBrakingToggle');
 let engineBrakingEnabled = true;
@@ -1137,6 +1204,7 @@ function performGearShift(direction) {
     else setTimeout(() => { gearNumberDisplay.classList.remove('shifting'); gearShiftIndicator.classList.remove('visible'); gearShiftCooldown = false; }, 250);
   }
   gearAnimationID = requestAnimationFrame(animateShift);
+
 }
 
 let autoShiftTimer = null;
@@ -1192,7 +1260,7 @@ function getRpmDelta(accelerating) {
     const throttleRamp = Math.min(1.0, holdTime / 0.06);
     if (accelerating) {
       const rpmCurve = rpmNorm < 0.9 ? 1.0 : (1.0 - (rpmNorm - 0.9) * 5);
-      return 280 * Math.max(0.35, rpmCurve) * throttleRamp * rs;
+      return 280 * Math.max(0.35, rpmCurve) * throttleRamp * rs * userThrottleMult;
     }
     return 0;
   }
@@ -1207,7 +1275,7 @@ function getRpmDelta(accelerating) {
     if (rpmNorm < 0.15) rpmCurve = 0.3 + rpmNorm * 3;
     else if (rpmNorm < 0.7) rpmCurve = 0.75 + 0.25 * Math.sin((rpmNorm - 0.15) / 0.55 * Math.PI);
     else { rpmCurve = 1.0 - (rpmNorm - 0.7) * 2.5; rpmCurve = Math.max(0.15, rpmCurve); }
-    return 50 * rpmCurve * gearFactor * throttleRamp * rs;
+    return 50 * rpmCurve * gearFactor * throttleRamp * rs * userThrottleMult;
   }
   return 0;
 }
@@ -1244,6 +1312,7 @@ let IDLE_RPM = 1250; // updated per preset
 function startRpmDecay() {
   stopRpmDecay();
   let lastTime = performance.now();
+
   function decayTick(now) {
     if (!audio.running || keysHeld['ArrowRight']) { stopRpmDecay(); return; }
     const dt = (now - lastTime) / 1000; lastTime = now;
@@ -1327,6 +1396,92 @@ idleSlider.addEventListener('input', () => {
   if (config.rpm <= v + 100 && audio.running) setRPM(v);
 });
 
+// ---------- Sound Tuning controls ----------
+const exhaustType        = document.getElementById('exhaustType');
+const valves2Btn         = document.getElementById('valves2');
+const valves4Btn         = document.getElementById('valves4');
+const bassSlider         = document.getElementById('bassSlider');
+const bassValue          = document.getElementById('bassValue');
+const whineSlider        = document.getElementById('whineSlider');
+const whineValue         = document.getElementById('whineValue');
+const pipeLenSlider      = document.getElementById('pipeLenSlider');
+const pipeLenValue       = document.getElementById('pipeLenValue');
+const throttleSensSlider = document.getElementById('throttleSensSlider');
+const throttleSensValue  = document.getElementById('throttleSensValue');
+
+let userThrottleMult = 1.0;  // user-adjustable throttle sensitivity multiplier
+let userValves = 4;          // 2 or 4 valves per cylinder
+
+// Exhaust type: changes filter cutoff, waveshaper drive, and master volume
+// Stock = muffled (low cutoff, low drive), Straight pipe = raw (high cutoff, high drive)
+exhaustType.addEventListener('change', () => {
+  if (!audio.ctx) return;
+  const t = audio.ctx.currentTime;
+  const type = exhaustType.value;
+  if (type === 'stock') {
+    audio.exhaustLP.Q.setTargetAtTime(1.5, t, 0.05);
+    audio.highCut.gain.setTargetAtTime(-14, t, 0.05);
+    audio.masterGain.gain.setTargetAtTime(0.6, t, 0.05);
+    audio.waveshaper.curve = audio._makeDistortionCurve(1.5);
+  } else if (type === 'slipon') {
+    audio.exhaustLP.Q.setTargetAtTime(2.0, t, 0.05);
+    audio.highCut.gain.setTargetAtTime(-8, t, 0.05);
+    audio.masterGain.gain.setTargetAtTime(0.8, t, 0.05);
+    audio.waveshaper.curve = audio._makeDistortionCurve(2.5);
+  } else { // straight
+    audio.exhaustLP.Q.setTargetAtTime(3.0, t, 0.05);
+    audio.highCut.gain.setTargetAtTime(-3, t, 0.05);
+    audio.masterGain.gain.setTargetAtTime(1.0, t, 0.05);
+    audio.waveshaper.curve = audio._makeDistortionCurve(4.0);
+  }
+});
+
+// Bass / Rumble: controls sub-bass shelf gain (0-16 dB)
+bassSlider.addEventListener('input', () => {
+  const v = parseInt(bassSlider.value);
+  bassValue.textContent = v;
+  if (audio.ctx) audio.eqSub.gain.setTargetAtTime(v, audio.ctx.currentTime, 0.05);
+});
+
+// Whine intensity: scales gear whine volume (0-100%)
+whineSlider.addEventListener('input', () => {
+  const v = parseInt(whineSlider.value);
+  whineValue.textContent = v;
+  audio._whineUserGain = v / 100;
+});
+
+// Pipe length: changes feedback delay time (resonance pitch)
+// Short pipe = high resonance, long pipe = deep resonance
+// Range: 1 (short, ~1.5ms) to 10 (long, ~8ms)
+pipeLenSlider.addEventListener('input', () => {
+  const v = parseFloat(pipeLenSlider.value);
+  pipeLenValue.textContent = v;
+  if (audio.ctx) {
+    const delayMs = 1.0 + v * 0.7; // 1.7ms to 8ms
+    audio.pipeDelay.delayTime.setTargetAtTime(delayMs / 1000, audio.ctx.currentTime, 0.04);
+    audio.pipeFeedback.gain.setTargetAtTime(0.15 + v * 0.03, audio.ctx.currentTime, 0.04);
+  }
+});
+
+// Throttle sensitivity: user override on top of preset revSpeed
+// 100 = preset default, 50 = half speed, 200 = double speed
+throttleSensSlider.addEventListener('input', () => {
+  const v = parseInt(throttleSensSlider.value);
+  throttleSensValue.textContent = v;
+  userThrottleMult = v / 100;
+});
+
+// Valves per cylinder: 2V = fewer harmonics (simpler sound), 4V = richer high-end
+[valves2Btn, valves4Btn].forEach(btn => {
+  btn.addEventListener('click', () => {
+    userValves = parseInt(btn.dataset.valves);
+    valves2Btn.classList.toggle('active', userValves === 2);
+    valves4Btn.classList.toggle('active', userValves === 4);
+    // Regenerate wavetable with different harmonic content
+    if (audio.ctx && audio.running) audio._startSource();
+  });
+});
+
 // ---------- Engine config ----------
 presetSelect.addEventListener('change', () => {
   const key = presetSelect.value;
@@ -1353,8 +1508,8 @@ presetSelect.addEventListener('change', () => {
   // Reset RPM to new idle
   setRPM(p.idle);
 
-  updateStrokeButtons(); renderCrankInputs(); updateFiringViz();
-  updateRedlineState(); updateReadout();
+   updateStrokeButtons(); renderCrankInputs(); updateFiringViz();
+  updateRedlineState(); updateReadout(); resizePistonCanvas();
 });
 
 cylinderSelect.addEventListener('change', () => {
@@ -1362,7 +1517,7 @@ cylinderSelect.addEventListener('change', () => {
   config.cylinders = n;
   config.crankAngles = Array.from({ length: n }, (_, i) => Math.round((i * config.cycleDegrees) / n));
   presetSelect.value = 'custom';
-  renderCrankInputs(); updateFiringViz(); updateReadout();
+  renderCrankInputs(); updateFiringViz(); updateReadout(); resizePistonCanvas();
 });
 
 function updateStrokeButtons() {
@@ -1445,139 +1600,174 @@ let animFrameID = null;
 function resizePistonCanvas() {
   const rect = pistonCanvas.parentElement.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
+  const numCyl = config.cylinders;
+  const rowH = 60; // compact row height
+  const totalH = Math.max(70, numCyl * rowH + 10);
   pistonCanvas.width = rect.width * dpr;
-  pistonCanvas.height = 220 * dpr;
+  pistonCanvas.height = totalH * dpr;
+  pistonCanvas.style.height = totalH + 'px';
   pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 function drawPiston(timestamp) {
-  // Smooth dt: skip first frame, clamp to 50ms max to avoid jumps
   if (lastAnimTime === null) { lastAnimTime = timestamp; animFrameID = requestAnimationFrame(drawPiston); return; }
   const rawDt = (timestamp - lastAnimTime) / 1000;
-  const dt = Math.min(rawDt, 0.05); // cap at 50ms (20fps minimum)
+  const dt = Math.min(rawDt, 0.05);
   lastAnimTime = timestamp;
 
-  // Advance crank angle based on RPM
   const rps = config.rpm / 60;
   crankAngle += rps * 2 * Math.PI * dt;
-  if (crankAngle > 1e6) crankAngle -= 1e6; // prevent float overflow
+  if (crankAngle > 1e6) crankAngle -= 1e6;
 
   const w = pistonCanvas.width / (window.devicePixelRatio || 1);
   const h = pistonCanvas.height / (window.devicePixelRatio || 1);
   pCtx.clearRect(0, 0, w, h);
 
   const numCyl = config.cylinders;
-  const spacing = w / (numCyl + 1);
-  const cycleDeg = config.cycleDegrees;
+  const rowH = (h - 10) / numCyl;
+  const pad = 5;
 
-  // Dimensions (scale to available space)
-  const crankR = Math.min(22, spacing * 0.18);     // crank radius
-  const rodLen = crankR * 3.2;                      // connecting rod length
-  const pistonW = crankR * 2.2;                     // piston width
-  const pistonH = crankR * 1.2;                     // piston height
-  const cylW = pistonW + 6;                         // cylinder bore width
-  const cylH = rodLen + crankR + pistonH + 10;      // cylinder bore height
+  // Horizontal layout: piston moves left-right across full width
+  //
+  // Math: work backwards from available space.
+  //   At TDC (angle=0°): pistonX_max = crankCX + crankR + rodLen
+  //   At BDC (angle=180°): pistonX_min = crankCX - crankR + rodLen
+  //   Stroke = 2 * crankR
+  //
+  // We want pistonX_max + pistonW/2 ≈ boreRight (piston face hits head)
+  // And crankCX - crankR ≈ leftMargin (crank circle fits)
+  //
+  // So: leftMargin + 2*crankR + rodLen + pistonW/2 = boreRight
+  // With rodLen = crankR * ratio, solve for crankR.
 
-  const crankCenterY = h - 35;                      // crank center near bottom
-  const cylTopY = crankCenterY - rodLen - crankR - pistonH - 8;
+  const leftMargin = 28;                   // space for label + crank circle
+  const rightMargin = 15;                  // gap to canvas edge
+  const boreRight = w - rightMargin;
+  const pistonH = Math.min(rowH * 0.65, 30);  // piston height (vertical)
+  const pistonW = 16;                      // piston width (horizontal, along bore)
+  const cylH = pistonH + 6;
+
+  // Rod-to-crank ratio: 2.0 = realistic, gives good visual stroke
+  const rodRatio = 2.0;
+  // Solve: leftMargin + crankR + crankR + crankR*rodRatio + pistonW/2 = boreRight
+  // crankR * (2 + rodRatio) = boreRight - leftMargin - pistonW/2
+  const crankR = Math.min(
+    (boreRight - leftMargin - pistonW / 2) / (2 + rodRatio),
+    rowH * 0.38
+  );
+  const rodLen = crankR * rodRatio;
+  const crankCX = leftMargin + crankR;     // crank center
 
   for (let i = 0; i < numCyl; i++) {
-    const cx = spacing * (i + 1);
+    const cy = pad + rowH * i + rowH / 2;
     const color = CYL_COLORS[i % CYL_COLORS.length];
 
-    // Each cylinder's crank offset
     const offsetDeg = config.crankAngles[i] || 0;
     const offsetRad = (offsetDeg / 360) * 2 * Math.PI;
     const angle = crankAngle + offsetRad;
 
-    // Crank pin position
-    const crankPinX = cx + Math.sin(angle) * crankR;
-    const crankPinY = crankCenterY - Math.cos(angle) * crankR;
+    // Crank pin
+    const cpX = crankCX + Math.cos(angle) * crankR;
+    const cpY = cy + Math.sin(angle) * crankR;
 
-    // Piston position (slider-crank mechanism)
-    const dx = crankPinX - cx;
-    const pistonY = crankPinY - Math.sqrt(Math.max(0, rodLen * rodLen - dx * dx));
+    // Piston position (slider-crank)
+    const dy = cpY - cy;
+    const pistonX = cpX + Math.sqrt(Math.max(0, rodLen * rodLen - dy * dy));
 
-    // --- Detect firing (simplified: fires near TDC, angle ≈ 0° within cycle) ---
+    // Firing detection
     const angleDeg = ((angle * 180 / Math.PI) % 360 + 360) % 360;
     const isFiring = angleDeg < 15 || angleDeg > 345;
 
-    // --- Draw cylinder bore ---
-    pCtx.strokeStyle = '#333';
+    // --- Bore walls ---
+    const boreLeft = crankCX + crankR + 3;
+    pCtx.strokeStyle = '#2a2a3a';
+    pCtx.lineWidth = 1.5;
+    // Top wall
+    pCtx.beginPath();
+    pCtx.moveTo(boreLeft, cy - cylH/2);
+    pCtx.lineTo(boreRight, cy - cylH/2);
+    pCtx.stroke();
+    // Bottom wall
+    pCtx.beginPath();
+    pCtx.moveTo(boreLeft, cy + cylH/2);
+    pCtx.lineTo(boreRight, cy + cylH/2);
+    pCtx.stroke();
+    // Cylinder head (right end)
     pCtx.lineWidth = 2;
-    // Left wall
     pCtx.beginPath();
-    pCtx.moveTo(cx - cylW/2, cylTopY);
-    pCtx.lineTo(cx - cylW/2, crankCenterY + 5);
-    pCtx.stroke();
-    // Right wall
-    pCtx.beginPath();
-    pCtx.moveTo(cx + cylW/2, cylTopY);
-    pCtx.lineTo(cx + cylW/2, crankCenterY + 5);
-    pCtx.stroke();
-    // Cylinder head (top)
-    pCtx.beginPath();
-    pCtx.moveTo(cx - cylW/2, cylTopY);
-    pCtx.lineTo(cx + cylW/2, cylTopY);
+    pCtx.moveTo(boreRight, cy - cylH/2);
+    pCtx.lineTo(boreRight, cy + cylH/2);
     pCtx.stroke();
 
     // --- Combustion flash ---
     if (isFiring) {
-      pCtx.fillStyle = `rgba(255, 120, 0, ${0.3 + Math.random() * 0.3})`;
-      pCtx.fillRect(cx - cylW/2 + 2, cylTopY + 1, cylW - 4, pistonY - cylTopY - pistonH/2);
+      pCtx.fillStyle = `rgba(255, 120, 0, ${0.2 + Math.random() * 0.3})`;
+      const flashL = pistonX + pistonW/2 + 1;
+      pCtx.fillRect(flashL, cy - cylH/2 + 1, boreRight - flashL - 1, cylH - 2);
     }
 
-    // --- Draw piston ---
-    const pY = pistonY - pistonH / 2;
-    pCtx.fillStyle = isFiring ? '#ff6b35' : '#667';
-    pCtx.strokeStyle = '#999';
+    // --- Piston ---
+    pCtx.fillStyle = isFiring ? '#ff6b35' : '#556';
+    pCtx.strokeStyle = '#888';
     pCtx.lineWidth = 1.5;
     pCtx.beginPath();
-    pCtx.roundRect(cx - pistonW/2, pY, pistonW, pistonH, 3);
+    pCtx.roundRect(pistonX - pistonW/2, cy - pistonH/2, pistonW, pistonH, 2);
     pCtx.fill();
     pCtx.stroke();
 
-    // --- Draw connecting rod ---
-    pCtx.strokeStyle = '#888';
-    pCtx.lineWidth = 3;
+    // --- Connecting rod ---
+    pCtx.strokeStyle = '#777';
+    pCtx.lineWidth = 2.5;
     pCtx.lineCap = 'round';
     pCtx.beginPath();
-    pCtx.moveTo(cx, pistonY);
-    pCtx.lineTo(crankPinX, crankPinY);
+    pCtx.moveTo(pistonX, cy);
+    pCtx.lineTo(cpX, cpY);
     pCtx.stroke();
 
-    // --- Draw crankshaft circle ---
+    // --- Crankshaft circle ---
+    pCtx.strokeStyle = '#3a3a4a';
+    pCtx.lineWidth = 1.5;
+    pCtx.beginPath();
+    pCtx.arc(crankCX, cy, crankR, 0, 2 * Math.PI);
+    pCtx.stroke();
+
+    // --- Crank arm ---
     pCtx.strokeStyle = '#555';
-    pCtx.lineWidth = 2;
+    pCtx.lineWidth = 3;
     pCtx.beginPath();
-    pCtx.arc(cx, crankCenterY, crankR, 0, 2 * Math.PI);
-    pCtx.stroke();
-
-    // --- Draw crank arm ---
-    pCtx.strokeStyle = '#777';
-    pCtx.lineWidth = 4;
-    pCtx.beginPath();
-    pCtx.moveTo(cx, crankCenterY);
-    pCtx.lineTo(crankPinX, crankPinY);
+    pCtx.moveTo(crankCX, cy);
+    pCtx.lineTo(cpX, cpY);
     pCtx.stroke();
 
     // --- Crank pin dot ---
     pCtx.fillStyle = color;
     pCtx.beginPath();
-    pCtx.arc(crankPinX, crankPinY, 3.5, 0, 2 * Math.PI);
+    pCtx.arc(cpX, cpY, 3, 0, 2 * Math.PI);
     pCtx.fill();
 
     // --- Wrist pin dot ---
-    pCtx.fillStyle = '#aaa';
+    pCtx.fillStyle = '#999';
     pCtx.beginPath();
-    pCtx.arc(cx, pistonY, 2.5, 0, 2 * Math.PI);
+    pCtx.arc(pistonX, cy, 2, 0, 2 * Math.PI);
     pCtx.fill();
 
-    // --- Cylinder label ---
+    // --- Label (left of crank) ---
     pCtx.fillStyle = color;
-    pCtx.font = '10px system-ui, sans-serif';
+    pCtx.font = '9px system-ui, sans-serif';
     pCtx.textAlign = 'center';
-    pCtx.fillText(`C${i + 1}`, cx, h - 8);
+    pCtx.fillText(`C${i+1}`, 10, cy + 3);
+
+    // --- Row separator ---
+    if (i < numCyl - 1) {
+      pCtx.strokeStyle = '#151520';
+      pCtx.lineWidth = 1;
+      pCtx.setLineDash([4, 4]);
+      pCtx.beginPath();
+      pCtx.moveTo(0, pad + rowH * (i + 1));
+      pCtx.lineTo(w, pad + rowH * (i + 1));
+      pCtx.stroke();
+      pCtx.setLineDash([]);
+    }
   }
 
   animFrameID = requestAnimationFrame(drawPiston);
