@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
-  <title>Motorcycle Engine Sound Simulator</title>
+  <title>RevSynth — Motorcycle Engine Sound Simulator</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <style>
     /* ===== Pico CSS variable overrides ===== */
@@ -41,10 +41,26 @@
     .rpm-card.redline-flash {
       background: #3a0a0a !important;
       border-color: #e94560 !important;
-      box-shadow: 0 0 24px rgba(233,69,96,0.4);
     }
     .rpm-card.redline-flash .rpm-number { color: #ff1744 !important; }
     .rpm-card.redline-warn .rpm-number { color: #ff5252; }
+
+    /* Full-screen red flash overlay */
+    body.screen-flash::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: radial-gradient(ellipse at center, rgba(233,69,96,0.25), rgba(180,20,40,0.15));
+      pointer-events: none;
+      animation: redPulse 0.12s ease-in-out;
+    }
+
+    @keyframes redPulse {
+      0% { opacity: 0; }
+      50% { opacity: 1; }
+      100% { opacity: 0.6; }
+    }
 
     .redline-indicator {
       font-size: 0.75rem;
@@ -347,7 +363,7 @@
 <body>
   <main class="container">
     <hgroup style="text-align:center; margin-bottom:1.5rem;">
-      <h1>Motorcycle Engine Sound Simulator</h1>
+      <h1>RevSynth</h1>
       <p>Tweak engine parameters and hear the difference</p>
     </hgroup>
 
@@ -872,12 +888,14 @@ function startRedlineFlicker() {
     if ((!config.isInRedline && !config.isAtLimiter) || !audio.running) { stopRedlineFlicker(); return; }
     on = !on;
     rpmCard.classList.toggle('redline-flash', on);
+    document.body.classList.toggle('screen-flash', on);
   }, config.isAtLimiter ? (50 + Math.random() * 30) : (100 + Math.random() * 80));
 }
 
 function stopRedlineFlicker() {
   if (redlineFlickerID) { clearInterval(redlineFlickerID); redlineFlickerID = null; }
   rpmCard.classList.remove('redline-flash');
+  document.body.classList.remove('screen-flash');
 }
 
 function updateRedlineState() {

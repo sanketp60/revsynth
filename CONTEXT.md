@@ -1,4 +1,4 @@
-# Motorcycle Engine Sound Simulator — Project Context
+# RevSynth — Project Context
 
 ## Overview
 
