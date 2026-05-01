@@ -1173,6 +1173,7 @@ startBtn.addEventListener('click', () => {
   if (audio.running) {
     audio.stop();
     startBtn.textContent = 'Start Engine'; startBtn.classList.remove('secondary');
+    stopPistonAnimation();
     stopRedlineFlicker(); stopRpmDecay(); redlineIndicator.classList.remove('visible');
     if (autoShiftTimer) { clearTimeout(autoShiftTimer); autoShiftTimer = null; }
     isThrottleActive = false;
@@ -1182,6 +1183,7 @@ startBtn.addEventListener('click', () => {
     if (gearAnimationID) cancelAnimationFrame(gearAnimationID);
   } else {
     audio.start();
+    startPistonAnimation();
     startBtn.textContent = 'Stop Engine'; startBtn.classList.add('secondary');
     if (autoGearShift) { currentGear = 1; gearNumberDisplay.textContent = '1'; }
     updateRedlineState();
@@ -1451,9 +1453,8 @@ function stopPistonAnimation() {
   if (animFrameID) { cancelAnimationFrame(animFrameID); animFrameID = null; }
 }
 
-// Start animation immediately (runs at idle even before engine starts)
+// Canvas ready but animation starts only when engine starts
 resizePistonCanvas();
-startPistonAnimation();
 window.addEventListener('resize', resizePistonCanvas);
 
 // ---------- Virtual Joypad (mobile) ----------
