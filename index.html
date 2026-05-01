@@ -450,6 +450,12 @@
         <span class="val-lim" id="limiterValue">11000</span>
       </div>
 
+      <div class="slider-row">
+        <span>IDLE</span>
+        <input type="range" id="idleSlider" min="600" max="2000" value="1250" step="50" style="accent-color:#00e676;">
+        <span style="color:#00e676; min-width:3.5rem; text-align:right;" id="idleValue">1250</span>
+      </div>
+
       <!-- Info strip -->
       <div class="info-strip">
         <span>RPM: <span class="val" id="rpmValue">1500</span></span>
@@ -551,43 +557,48 @@ const CYL_COLORS = ['#e94560', '#00d2ff', '#00e676', '#ffab00', '#d500f9', '#ff6
 // ============================================================
 //  Engine presets
 // ============================================================
-// Presets: real bikes with accurate crank angles, redline, and limiter RPM
+// Presets: real bikes with accurate specs
+// revSpeed: throttle response multiplier (1.0 = baseline ~130hp sportbike)
+//   Based on power-to-rotating-mass ratio:
+//   Low-power heavy singles/cruisers = 0.3-0.5 (sluggish, lazy torque)
+//   Mid-range twins/nakeds = 0.6-0.8 (responsive but not explosive)
+//   High-power sportbikes = 1.0-1.4 (screaming, instant response)
 const PRESETS = {
   // --- Singles ---
-  re350:        { name: 'Royal Enfield Classic 350',    angles: [0],                  cylinders: 1, stroke: 4, redline: 5500,  limiter: 6800  },
-  ktm390:       { name: 'KTM 390 Duke',                angles: [0],                  cylinders: 1, stroke: 4, redline: 9500,  limiter: 10500 },
+  re350:        { name: 'Royal Enfield Classic 350',    angles: [0],                  cylinders: 1, stroke: 4, idle: 1100, redline: 5500,  limiter: 6800,  revSpeed: 0.35 },
+  ktm390:       { name: 'KTM 390 Duke',                angles: [0],                  cylinders: 1, stroke: 4, idle: 1500, redline: 9500,  limiter: 10500, revSpeed: 0.65 },
 
   // --- V-Twins ---
-  ducati959:    { name: 'Ducati 959 Panigale',          angles: [0, 90],              cylinders: 2, stroke: 4, redline: 10500, limiter: 11500 },
-  harley883:    { name: 'Harley Sportster 883',         angles: [0, 45],              cylinders: 2, stroke: 4, redline: 5500,  limiter: 6200  },
-  motoGuzzi:    { name: 'Moto Guzzi V7',               angles: [0, 90],              cylinders: 2, stroke: 4, redline: 7000,  limiter: 7500  },
-  indian:       { name: 'Indian Scout',                 angles: [0, 60],              cylinders: 2, stroke: 4, redline: 8100,  limiter: 8600  },
+  ducati959:    { name: 'Ducati 959 Panigale',          angles: [0, 90],              cylinders: 2, stroke: 4, idle: 1250, redline: 10500, limiter: 11500, revSpeed: 0.90 },
+  harley883:    { name: 'Harley Sportster 883',         angles: [0, 45],              cylinders: 2, stroke: 4, idle: 950,  redline: 5500,  limiter: 6200,  revSpeed: 0.40 },
+  motoGuzzi:    { name: 'Moto Guzzi V7',               angles: [0, 90],              cylinders: 2, stroke: 4, idle: 1050, redline: 7000,  limiter: 7500,  revSpeed: 0.45 },
+  indian:       { name: 'Indian Scout',                 angles: [0, 60],              cylinders: 2, stroke: 4, idle: 1000, redline: 8100,  limiter: 8600,  revSpeed: 0.55 },
 
   // --- Parallel Twins ---
-  mt07:         { name: 'Yamaha MT-07',                 angles: [0, 270],             cylinders: 2, stroke: 4, redline: 9500,  limiter: 10500 },
-  ninja650:     { name: 'Kawasaki Ninja 650',           angles: [0, 180],             cylinders: 2, stroke: 4, redline: 10000, limiter: 10500 },
-  re650:        { name: 'Royal Enfield INT 650',        angles: [0, 270],             cylinders: 2, stroke: 4, redline: 7500,  limiter: 8250  },
-  aprilia660:   { name: 'Aprilia RS 660',               angles: [0, 270],             cylinders: 2, stroke: 4, redline: 10500, limiter: 11500 },
+  mt07:         { name: 'Yamaha MT-07',                 angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1150, redline: 9500,  limiter: 10500, revSpeed: 0.70 },
+  ninja650:     { name: 'Kawasaki Ninja 650',           angles: [0, 180],             cylinders: 2, stroke: 4, idle: 1200, redline: 10000, limiter: 10500, revSpeed: 0.68 },
+  re650:        { name: 'Royal Enfield INT 650',        angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1100, redline: 7500,  limiter: 8250,  revSpeed: 0.48 },
+  aprilia660:   { name: 'Aprilia RS 660',               angles: [0, 270],             cylinders: 2, stroke: 4, idle: 1300, redline: 10500, limiter: 11500, revSpeed: 0.82 },
 
   // --- Triples ---
-  triumph765:   { name: 'Triumph Street Triple 765 RS', angles: [0, 240, 480],        cylinders: 3, stroke: 4, redline: 12000, limiter: 12650 },
-  mt09:         { name: 'Yamaha MT-09',                 angles: [0, 240, 480],        cylinders: 3, stroke: 4, redline: 10500, limiter: 11500 },
+  triumph765:   { name: 'Triumph Street Triple 765 RS', angles: [0, 240, 480],        cylinders: 3, stroke: 4, idle: 1250, redline: 12000, limiter: 12650, revSpeed: 1.00 },
+  mt09:         { name: 'Yamaha MT-09',                 angles: [0, 240, 480],        cylinders: 3, stroke: 4, idle: 1200, redline: 10500, limiter: 11500, revSpeed: 0.92 },
 
   // --- Inline Fours ---
-  cbr600:       { name: 'Honda CBR600RR',               angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, redline: 14000, limiter: 15000 },
-  zx6r:         { name: 'Kawasaki ZX-6R',               angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, redline: 14500, limiter: 15500 },
-  r1:           { name: 'Yamaha YZF-R1 (Crossplane)',   angles: [0, 270, 180, 450],   cylinders: 4, stroke: 4, redline: 13500, limiter: 14200 },
-  s1000rr:      { name: 'BMW S1000RR',                  angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, redline: 13500, limiter: 14200 },
+  cbr600:       { name: 'Honda CBR600RR',               angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, idle: 1300, redline: 14000, limiter: 15000, revSpeed: 1.10 },
+  zx6r:         { name: 'Kawasaki ZX-6R',               angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, idle: 1300, redline: 14500, limiter: 15500, revSpeed: 1.12 },
+  r1:           { name: 'Yamaha YZF-R1 (Crossplane)',   angles: [0, 270, 180, 450],   cylinders: 4, stroke: 4, idle: 1100, redline: 13500, limiter: 14200, revSpeed: 1.20 },
+  s1000rr:      { name: 'BMW S1000RR',                  angles: [0, 180, 360, 540],   cylinders: 4, stroke: 4, idle: 1150, redline: 13500, limiter: 14200, revSpeed: 1.30 },
 
   // --- V4 ---
-  panigaleV4:   { name: 'Ducati Panigale V4',           angles: [0, 90, 360, 450],    cylinders: 4, stroke: 4, redline: 13500, limiter: 14500 },
+  panigaleV4:   { name: 'Ducati Panigale V4',           angles: [0, 90, 360, 450],    cylinders: 4, stroke: 4, idle: 1300, redline: 13500, limiter: 14500, revSpeed: 1.35 },
 
   // --- Flat / Boxer ---
-  goldwing:     { name: 'Honda Gold Wing (Flat-6)',      angles: [0, 120, 240, 360, 480, 600], cylinders: 6, stroke: 4, redline: 6000, limiter: 6800 },
-  r1250gs:      { name: 'BMW R1250GS (Boxer Twin)',     angles: [0, 360],             cylinders: 2, stroke: 4, redline: 7700,  limiter: 8500  },
+  goldwing:     { name: 'Honda Gold Wing (Flat-6)',      angles: [0, 120, 240, 360, 480, 600], cylinders: 6, stroke: 4, idle: 750,  redline: 6000,  limiter: 6800,  revSpeed: 0.38 },
+  r1250gs:      { name: 'BMW R1250GS (Boxer Twin)',     angles: [0, 360],             cylinders: 2, stroke: 4, idle: 950,  redline: 7700,  limiter: 8500,  revSpeed: 0.52 },
 
   // --- Custom ---
-  custom:       { name: 'Custom',                       angles: [0],                  cylinders: 1, stroke: 4, redline: 9000,  limiter: 11000 },
+  custom:       { name: 'Custom',                       angles: [0],                  cylinders: 1, stroke: 4, idle: 1200, redline: 9000,  limiter: 11000, revSpeed: 0.70 },
 };
 
 // ============================================================
@@ -601,6 +612,7 @@ class EngineConfig {
     this.strokeType = 4;
     this.redlineRpm = 9000;
     this.limiterRpm = 11000;
+    this.revSpeed = 1.0;  // throttle response multiplier
   }
 
   get redlineProximity() {
@@ -951,6 +963,8 @@ const tachRedlineMark   = document.getElementById('tachRedlineMark');
 const tachLimiterMark   = document.getElementById('tachLimiterMark');
 const shiftLightEls     = document.querySelectorAll('.shift-light');
 const redlineIndicator  = document.getElementById('redlineIndicator');
+const idleSlider        = document.getElementById('idleSlider');
+const idleValueSpan     = document.getElementById('idleValue');
 const infoFires         = document.getElementById('infoFires');
 const infoCycle         = document.getElementById('infoCycle');
 
@@ -1169,8 +1183,7 @@ function getRpmDelta(accelerating) {
   const rpm = config.rpm;
   const limiter = config.limiterRpm;
   const rpmNorm = rpm / limiter;
-  // Neutral = no gear engaged, regardless of auto shift toggle.
-  // If user manually shifted to gear 1+ via arrow keys, they're in gear.
+  const rs = config.revSpeed; // bike-specific throttle response
   const isNeutral = currentGear === 0;
 
   if (isNeutral) {
@@ -1178,7 +1191,7 @@ function getRpmDelta(accelerating) {
     const throttleRamp = Math.min(1.0, holdTime / 0.06);
     if (accelerating) {
       const rpmCurve = rpmNorm < 0.9 ? 1.0 : (1.0 - (rpmNorm - 0.9) * 5);
-      return 280 * Math.max(0.35, rpmCurve) * throttleRamp;
+      return 280 * Math.max(0.35, rpmCurve) * throttleRamp * rs;
     }
     return 0;
   }
@@ -1193,7 +1206,7 @@ function getRpmDelta(accelerating) {
     if (rpmNorm < 0.15) rpmCurve = 0.3 + rpmNorm * 3;
     else if (rpmNorm < 0.7) rpmCurve = 0.75 + 0.25 * Math.sin((rpmNorm - 0.15) / 0.55 * Math.PI);
     else { rpmCurve = 1.0 - (rpmNorm - 0.7) * 2.5; rpmCurve = Math.max(0.15, rpmCurve); }
-    return 50 * rpmCurve * gearFactor * throttleRamp;
+    return 50 * rpmCurve * gearFactor * throttleRamp * rs;
   }
   return 0;
 }
@@ -1225,7 +1238,7 @@ document.addEventListener('keydown', (e) => {
 
 // ---------- RPM decay ----------
 let decayID = null;
-const IDLE_RPM = 1500;
+let IDLE_RPM = 1250; // updated per preset
 
 function startRpmDecay() {
   stopRpmDecay();
@@ -1239,14 +1252,13 @@ function startRpmDecay() {
     const limiter = config.limiterRpm;
     const rpmNorm = rpmAboveIdle / (limiter - IDLE_RPM);
     const isNeutral = currentGear === 0;
+    const rs = config.revSpeed;
     let decayRate;
-    if (isNeutral) { decayRate = 5500 * (0.35 + rpmNorm * 0.65); }
+    if (isNeutral) { decayRate = 5500 * (0.35 + rpmNorm * 0.65) * rs; }
     else {
-      // Lower gear = much faster decay (shorter ratio = more engine braking)
-      // g1=2.5, g2=1.67, g3=1.25, g4=1.0, g5=0.83, g6=0.71
       const gear = Math.max(1, currentGear);
       const gearBraking = 3.5 / gear;
-      decayRate = 1400 * gearBraking * (0.15 + rpmNorm * rpmNorm * 0.85);
+      decayRate = 1400 * gearBraking * (0.15 + rpmNorm * rpmNorm * 0.85) * rs;
     }
     setRPM(Math.max(IDLE_RPM, rpm - decayRate * dt));
     checkAutoGearShift();
@@ -1305,6 +1317,15 @@ limiterSlider.addEventListener('input', () => {
   updateRedlineState(); updateReadout();
 });
 
+// ---------- Idle slider ----------
+idleSlider.addEventListener('input', () => {
+  const v = parseInt(idleSlider.value);
+  IDLE_RPM = v;
+  idleValueSpan.textContent = v;
+  // If engine is at idle, update RPM to match new idle
+  if (config.rpm <= v + 100 && audio.running) setRPM(v);
+});
+
 // ---------- Engine config ----------
 presetSelect.addEventListener('change', () => {
   const key = presetSelect.value;
@@ -1315,16 +1336,21 @@ presetSelect.addEventListener('change', () => {
   config.strokeType = p.stroke;
   cylinderSelect.value = p.cylinders;
 
-  // Set redline and limiter from preset
+  // Set all preset values
   config.redlineRpm = p.redline;
   config.limiterRpm = p.limiter;
+  config.revSpeed = p.revSpeed;
+  IDLE_RPM = p.idle;
+
   redlineSlider.value = p.redline;
   limiterSlider.value = p.limiter;
+  idleSlider.value = p.idle;
   redlineValueSpan.textContent = p.redline;
   limiterValueSpan.textContent = p.limiter;
+  idleValueSpan.textContent = p.idle;
 
-  // Clamp RPM if above new limiter
-  if (config.rpm > p.limiter) setRPM(p.limiter);
+  // Reset RPM to new idle
+  setRPM(p.idle);
 
   updateStrokeButtons(); renderCrankInputs(); updateFiringViz();
   updateRedlineState(); updateReadout();
@@ -1655,12 +1681,16 @@ function init() {
   config.strokeType = p.stroke;
   config.redlineRpm = p.redline;
   config.limiterRpm = p.limiter;
+  config.revSpeed = p.revSpeed;
+  IDLE_RPM = p.idle;
   config.rpm = IDLE_RPM;
   cylinderSelect.value = p.cylinders;
   redlineSlider.value = p.redline;
   limiterSlider.value = p.limiter;
+  idleSlider.value = p.idle;
   redlineValueSpan.textContent = p.redline;
   limiterValueSpan.textContent = p.limiter;
+  idleValueSpan.textContent = p.idle;
   rpmSlider.value = IDLE_RPM;
   rpmValue.textContent = IDLE_RPM;
   rpmDisplay.textContent = IDLE_RPM;
