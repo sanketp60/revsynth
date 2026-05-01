@@ -1,8 +1,0 @@
-[     145ms] [LOG] TypeError: Failed to fetch
-    at https://dash.cloudflare.com/cf-c0700544b11110a6.js:3:124670
-    at async e (https://dash.cloudflare.com/cf-48d6691407e155d5.js:3:571819) @ https://dash.cloudflare.com/cf-9d9e1773fd9015a1.js:2
-[    5855ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://dash.cloudflare.com/api/v4/accounts/f51d0ccf04afa2a80b963cea1a5db202/pages/connections/github/sanketp60/repos/revsynth/?provider_account_id=38463265:0
-[    6059ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://dash.cloudflare.com/api/v4/accounts/f51d0ccf04afa2a80b963cea1a5db202/builds/repos/github/38463265/1226167136/config_autofill?branch=main&root_directory=%2F:0
-[   18154ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://dash.cloudflare.com/api/v4/accounts/f51d0ccf04afa2a80b963cea1a5db202/builds/repos/github/38463265/1226167136/config_autofill?branch=main&root_directory=%2F:0
-[   40281ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://dash.cloudflare.com/api/v4/accounts/f51d0ccf04afa2a80b963cea1a5db202/builds/repos/github/38463265/1226167136/config_autofill?branch=main&root_directory=%2F:0
-[   87444ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://dash.cloudflare.com/api/v4/accounts/f51d0ccf04afa2a80b963cea1a5db202/builds/repos/github/38463265/1226167136/config_autofill?branch=main&root_directory=%2F:0
